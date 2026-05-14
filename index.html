@@ -2,39 +2,689 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>stiven · دردشة خاصة</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+             updateProfile, onAuthStateChanged, signOut }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+             serverTimestamp, doc, setDoc, updateDoc, getDoc }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    /* ══════════════════════════════════════════════
+       🔥 Firebase Config — بيانات مشروع stiven
+    ══════════════════════════════════════════════ */
     const firebaseConfig = {
-      apiKey: "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
-      authDomain: "stiven-chat.firebaseapp.com",
-      projectId: "stiven-chat",
-      storageBucket: "stiven-chat.firebasestorage.app",
+      apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
+      authDomain:        "stiven-chat.firebaseapp.com",
+      projectId:         "stiven-chat",
+      storageBucket:     "stiven-chat.firebasestorage.app",
       messagingSenderId: "1049787541567",
-      appId: "1:1049787541567:web:8a8769ea7a7355d7cc308a",
-      measurementId: "G-M0TTJ9NV0R"
+      appId:             "1:1049787541567:web:8a8769ea7a7355d7cc308a",
+      measurementId:     "G-M0TTJ9NV0R"
     };
+    /* ══════════════════════════════════════════════ */
 
-    const app = initializeApp(firebaseConfig);
+    const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    window.__FB = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, updateDoc, getDoc };
+    window.__FB = {
+      auth, db,
+      createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      updateProfile, onAuthStateChanged, signOut,
+      collection, addDoc, onSnapshot, query, orderBy,
+      serverTimestamp, doc, setDoc, updateDoc, getDoc
+    };
     window.dispatchEvent(new Event("fb-ready"));
   </script>
 
   <style>
     :root {
-      --bg: #111b21; --surface: #202c33; --surface2: #2a3942;
-      --border: #3b4a54; --accent: #00a884; --accent2: #008069;
-      --text: #e9edef; --muted: #8696a0; --me: #005c4b; --out: #202c33;
+      --bg:        #111b21;
+      --surface:   #202c33;
+      --surface2:  #2a3942;
+      --border:    #3b4a54;
+      --accent:    #00a884;
+      --accent2:   #008069;
+      --glow:      rgba(0,168,132,.18);
+      --me:        #005c4b;
+      --out:       #202c33;
+      --text:      #e9edef;
+      --muted:     #8696a0;
+      --red:       #f15c6d;
+      --font:      'Cairo', sans-serif;
+      --r:         14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .hidden { display: none !important; }
+
+    /* ── AUTH ───────────────────────────────── */
+    #auth-screen {
+      height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(0,168,132,.1), transparent 65%), var(--bg);
+    }
+    .card {
+      width: 420px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 22px; padding: 38px 34px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      animation: up .45s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes up { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
+
+    .logo { text-align: center; margin-bottom: 26px; }
+    .logo-icon {
+      width: 62px; height: 62px; border-radius: 18px; margin: 0 auto 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; box-shadow: 0 0 28px var(--glow);
+    }
+    .logo h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -.3px; }
+    .logo p  { color: var(--muted); font-size: .82rem; margin-top: 4px; }
+
+    .tabs { display: flex; gap: 5px; background: var(--bg); border-radius: 11px; padding: 4px; margin-bottom: 22px; }
+    .tab  {
+      flex: 1; padding: 9px; border: none; border-radius: 8px; cursor: pointer;
+      font-family: var(--font); font-size: .88rem; font-weight: 600;
+      background: transparent; color: var(--muted); transition: all .2s;
+    }
+    .tab.active { background: var(--surface2); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+
+    .av-pick { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .av-ring {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--surface2); border: 2px dashed var(--border);
+      overflow: hidden; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      transition: border-color .2s;
+    }
+    .av-ring:hover { border-color: var(--accent); }
+    .av-ring img   { width: 100%; height: 100%; object-fit: cover; }
+    .av-pick small { color: var(--muted); font-size: .78rem; line-height: 1.5; }
+    .av-pick small span { color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+    .row2 { display: flex; gap: 10px; }
+    .fg   { margin-bottom: 13px; flex: 1; }
+    .fg label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .fg input {
+      width: 100%; padding: 10px 13px; background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: 10px;
+      color: var(--text); font-family: var(--font); font-size: .9rem; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .fg input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .fg input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%; padding: 12px; margin-top: 6px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 11px; color: #fff;
+      font-family: var(--font); font-size: .98rem; font-weight: 700;
+      cursor: pointer; transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 18px var(--glow);
+    }
+    .btn:hover  { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(0,168,132,.38); }
+    .btn:active { transform: none; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .err {
+      background: rgba(241,92,109,.12); border: 1px solid rgba(241,92,109,.3);
+      border-radius: 9px; padding: 9px 13px; font-size: .83rem;
+      color: var(--red); margin-bottom: 12px; text-align: center;
+    }
+
+    /* ── CHAT ───────────────────────────────── */
+    #chat-screen {
+      height: 100vh; display: flex; flex-direction: column;
+      max-width: 860px; margin: 0 auto; background: var(--bg);
+    }
+
+    /* Header */
+    .hdr {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 18px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .hav { width: 42px; height: 42px; border-radius: 50%; background: var(--surface2); overflow: hidden; position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .hav img { width: 100%; height: 100%; object-fit: cover; }
+    .odot {
+      position: absolute; bottom: 1px; right: 1px;
+      width: 11px; height: 11px; border-radius: 50%;
+      border: 2px solid var(--surface);
+      background: #555; transition: background .4s;
+    }
+    .odot.on { background: var(--accent); box-shadow: 0 0 6px rgba(0,168,132,.7); }
+    .hinfo h2 { font-size: .98rem; font-weight: 700; }
+    .hst { font-size: .73rem; color: var(--muted); }
+    .hst.on { color: var(--accent); }
+    .hdr .spacer { flex: 1; }
+    .iBtn {
+      background: none; border: none; color: var(--muted); font-size: 1.05rem;
+      cursor: pointer; padding: 7px; border-radius: 8px; transition: background .15s, color .15s;
+    }
+    .iBtn:hover { background: var(--border); color: var(--text); }
+
+    /* Messages */
+    .msgs {
+      flex: 1; overflow-y: auto; padding: 16px 14px;
+      display: flex; flex-direction: column; gap: 4px;
+      background:
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+        var(--bg);
+    }
+
+    .day-sep { text-align: center; margin: 10px 0; }
+    .day-sep span {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 13px;
+      font-size: .7rem; color: var(--muted);
+    }
+
+    .brow {
+      display: flex; align-items: flex-end; gap: 7px;
+      max-width: 68%; animation: pop .2s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes pop { from { opacity:0; transform:scale(.88) translateY(6px) } to { opacity:1; transform:none } }
+    .brow.me    { align-self: flex-end;   flex-direction: row-reverse; }
+    .brow.other { align-self: flex-start; }
+
+    .bav { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .bav img { width: 100%; height: 100%; object-fit: cover; }
+
+    .bub {
+      padding: 8px 12px 6px; border-radius: 12px;
+      font-size: .88rem; line-height: 1.55; max-width: 100%; word-break: break-word;
+    }
+    .brow.me    .bub { background: var(--me);  border-bottom-left-radius: 3px; }
+    .brow.other .bub { background: var(--out); border-bottom-right-radius: 3px; border: 1px solid var(--border); }
+    .bub img { max-width: 260px; max-height: 300px; border-radius: 9px; display: block; margin-top: 4px; cursor: pointer; }
+
+    .btime { font-size: .63rem; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+    .brow.me .btime { text-align: right; }
+    .brow.me .btime::after { content: ' ✓✓'; color: var(--accent); }
+
+    /* Input bar */
+    .bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; background: var(--surface);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .img-btn {
+      background: none; border: none; color: var(--muted); font-size: 1.25rem;
+      cursor: pointer; padding: 6px; border-radius: 8px; transition: color .15s;
+      flex-shrink: 0;
+    }
+    .img-btn:hover { color: var(--accent); }
+    .tinput {
+      flex: 1; padding: 10px 15px; background: var(--surface2);
+      border: 1.5px solid var(--border); border-radius: 22px;
+      color: var(--text); font-family: var(--font); font-size: .9rem;
+      outline: none; resize: none; max-height: 110px; line-height: 1.4;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .tinput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .tinput::placeholder { color: var(--muted); }
+    .sbtn {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; color: #fff; font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 3px 14px var(--glow);
+    }
+    .sbtn:hover  { transform: scale(1.08); }
+    .sbtn:active { transform: scale(.95); }
+    .sbtn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* Image preview before send */
+    .img-preview-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; background: var(--surface2);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .img-preview-bar img { height: 60px; border-radius: 8px; object-fit: cover; }
+    .img-preview-bar .cancel { background: none; border: none; color: var(--red); font-size: 1.2rem; cursor: pointer; margin-right: auto; }
+    .img-preview-bar span { font-size: .82rem; color: var(--muted); }
+
+    /* Typing dots */
+    .typing { display: flex; align-items: center; gap: 4px; padding: 8px 13px; background: var(--out); border: 1px solid var(--border); border-radius: 12px; border-bottom-right-radius: 3px; width: fit-content; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s ease-in-out infinite; }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce { 0%,60%,100% { transform:translateY(0) } 30% { transform:translateY(-5px) } }
+
+    /* Empty state */
+    .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:10px; padding:40px; text-align:center; }
+    .empty .em { font-size: 3.5rem; }
+    .empty h3  { color: var(--text); font-size: 1.1rem; }
+    .empty p   { font-size: .83rem; line-height: 1.6; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 11px;
+      padding: 9px 18px; font-size: .83rem; opacity: 0; pointer-events: none;
+      transition: all .28s; z-index: 99;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Lightbox */
+    .lbox { position:fixed; inset:0; background:rgba(0,0,0,.88); display:flex; align-items:center; justify-content:center; z-index:999; cursor:zoom-out; }
+    .lbox img { max-width:90vw; max-height:90vh; border-radius:10px; }
+
+    /* Spinner */
+    .spin { width:18px; height:18px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation: sp .7s linear infinite; display:inline-block; }
+    @keyframes sp { to { transform:rotate(360deg) } }
+
+    /* Upload progress */
+    .up-progress { font-size: .78rem; color: var(--accent); margin-right: auto; }
+
+    @media (max-width:520px) {
+      .card { width:95vw; padding:28px 18px; }
+      .brow { max-width:85%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH ═══════════ -->
+<div id="auth-screen">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">💬</div>
+      <h1>stiven</h1>
+      <p>دردشتك الخاصة · لا أحد غيركما</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">تسجيل الدخول</button>
+      <button class="tab"        onclick="switchTab('reg')">حساب جديد</button>
+    </div>
+
+    <div id="auth-err" class="err hidden"></div>
+
+    <!-- Register -->
+    <div id="reg-form">
+      <div class="av-pick">
+        <div class="av-ring" id="av-ring" onclick="document.getElementById('av-file').click()">📷</div>
+        <input type="file" id="av-file" accept="image/*" class="hidden" onchange="pickAvatar(this)" />
+        <small>صورتك الشخصية<br><span onclick="document.getElementById('av-file').click()">اختر صورة</span></small>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>الاسم</label><input type="text" id="r-first" placeholder="عبد الرحمان" /></div>
+        <div class="fg"><label>اللقب</label><input type="text" id="r-last"  placeholder="بلخير" /></div>
+      </div>
+      <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="r-email" placeholder="belkhir@mail.com" /></div>
+      <div class="fg"><label>كلمة المرور</label><input type="password" id="r-pass" placeholder="6 أحرف على الأقل" /></div>
+      <button class="btn" id="r-btn" onclick="doRegister()">إنشاء الحساب</button>
+    </div>
+
+    <!-- Login -->
+    <div id="log-form" class="hidden">
+      <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="l-email" placeholder="belkhir@mail.com" /></div>
+      <div class="fg"><label>كلمة المرور</label><input type="password" id="l-pass" placeholder="••••••••" /></div>
+      <button class="btn" id="l-btn" onclick="doLogin()">دخول</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CHAT ═══════════ -->
+<div id="chat-screen" class="hidden">
+
+  <div class="hdr">
+    <div class="hav">
+      <img id="p-av" src="" alt="" style="display:none" />
+      <span id="p-em">👤</span>
+      <div class="odot" id="p-dot"></div>
+    </div>
+    <div class="hinfo">
+      <h2 id="p-name">—</h2>
+      <div class="hst" id="p-status">جارٍ التحميل...</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iBtn" title="خروج" onclick="doLogout()">⏏️</button>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="empty" id="empty-state">
+      <div class="em">💌</div>
+      <h3>لا رسائل بعد</h3>
+      <p>كن أول من يبدأ!<br>أرسل رسالة أو صورة الآن 👋</p>
+    </div>
+  </div>
+
+  <!-- Image preview before sending -->
+  <div class="img-preview-bar hidden" id="img-preview-bar">
+    <img id="img-preview-thumb" src="" alt="" />
+    <span>جاهزة للإرسال</span>
+    <button class="cancel" onclick="cancelImg()">✕</button>
+  </div>
+
+  <div class="bar">
+    <button class="img-btn" title="إرسال صورة" onclick="document.getElementById('img-input').click()">🖼️</button>
+    <input type="file" id="img-input" accept="image/*" class="hidden" onchange="pickImage(this)" />
+    <textarea class="tinput" id="msg-in" rows="1" placeholder="اكتب رسالتك..."
+      onkeydown="onKey(event)" oninput="autoH(this)"></textarea>
+    <button class="sbtn" id="s-btn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="footer-credit" style="
+  position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cairo', sans-serif; font-size: .7rem;
+  color: #3b4a54; letter-spacing: .3px; pointer-events: none;
+  user-select: none; white-space: nowrap;
+">
+  Powered by Meta Platforms, Inc. &nbsp;·&nbsp; Engineered by <span style="color:#4a5568">abderahmane belkhir</span>
+</div>
+
+<!-- ═══════════ SCRIPT ═══════════ -->
+<script>
+/* ── State ─────────────────────────── */
+let FB        = null;
+let ME        = null;
+let myAvatar  = null;   // base64 or ""
+let imgToSend = null;   // { base64, file } pending image
+let msgUnsub  = null;
+let presUnsub = null;
+let partnerAvatar = "";
+
+/* ── Firebase Ready ────────────────── */
+window.addEventListener("fb-ready", () => {
+  FB = window.__FB;
+  FB.onAuthStateChanged(FB.auth, user => {
+    if (user) { ME = user; enterChat(); }
+  });
+});
+
+/* ── Tabs ──────────────────────────── */
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach((el,i) =>
+    el.classList.toggle("active", t==="login" ? i===0 : i===1));
+  document.getElementById("reg-form").classList.toggle("hidden", t!=="reg");
+  document.getElementById("log-form").classList.toggle("hidden", t!=="login");
+  clearErr();
+}
+
+function showErr(m) {
+  const el = document.getElementById("auth-err");
+  el.textContent = m; el.classList.remove("hidden");
+}
+function clearErr() { document.getElementById("auth-err").classList.add("hidden"); }
+
+/* ── Avatar picker (auth) ──────────── */
+function pickAvatar(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    myAvatar = e.target.result;
+    const ring = document.getElementById("av-ring");
+    ring.innerHTML = `<img src="${myAvatar}" />`;
+  };
+  r.readAsDataURL(f);
+}
+
+/* ── Register ──────────────────────── */
+async function doRegister() {
+  if (!FB) return showErr("Firebase لم يتصل بعد.");
+  const first = v("r-first"), last = v("r-last"),
+        email = v("r-email"), pass  = v("r-pass");
+  if (!first||!last) return showErr("أدخل الاسم واللقب.");
+  if (!email)        return showErr("أدخل البريد الإلكتروني.");
+  if (pass.length<6) return showErr("كلمة المرور أقل من 6 أحرف.");
+  clearErr(); btnLoad("r-btn", true);
+  try {
+    const cred = await FB.createUserWithEmailAndPassword(FB.auth, email, pass);
+    await FB.updateProfile(cred.user, { displayName: `${first} ${last}` });
+    await saveProfile(cred.user.uid, `${first} ${last}`, myAvatar||"");
+    ME = cred.user;
+    enterChat();
+  } catch(e) { showErr(ferr(e.code)); }
+  finally    { btnLoad("r-btn", false); }
+}
+
+/* ── Login ─────────────────────────── */
+async function doLogin() {
+  if (!FB) return showErr("Firebase لم يتصل بعد.");
+  const email = v("l-email"), pass = v("l-pass");
+  if (!email||!pass) return showErr("أدخل البريد وكلمة المرور.");
+  clearErr(); btnLoad("l-btn", true);
+  try {
+    await FB.signInWithEmailAndPassword(FB.auth, email, pass);
+  } catch(e) { showErr(ferr(e.code)); btnLoad("l-btn", false); }
+}
+
+/* ── Logout ────────────────────────── */
+async function doLogout() {
+  if (ME) await FB.updateDoc(FB.doc(FB.db,"users",ME.uid), { online:false });
+  if (msgUnsub)  msgUnsub();
+  if (presUnsub) presUnsub();
+  await FB.signOut(FB.auth);
+  document.getElementById("chat-screen").classList.add("hidden");
+  document.getElementById("auth-screen").classList.remove("hidden");
+  resetMsgs(); ME = null;
+}
+
+/* ── Enter Chat ────────────────────── */
+async function enterChat() {
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("chat-screen").classList.remove("hidden");
+
+  // Load my avatar from Firestore if not set yet
+  if (!myAvatar) {
+    try {
+      const snap = await FB.getDoc(FB.doc(FB.db,"users",ME.uid));
+      if (snap.exists()) myAvatar = snap.data().avatar || "";
+    } catch(_) {}
+  }
+
+  await saveProfile(ME.uid, ME.displayName||ME.email, myAvatar||"", true);
+
+  listenPresence();
+  listenMessages();
+
+  window.addEventListener("beforeunload", () => {
+    FB.updateDoc(FB.doc(FB.db,"users",ME.uid),{online:false}).catch(()=>{});
+  });
+}
+
+async function saveProfile(uid, name, avatar, online=false) {
+  await FB.setDoc(FB.doc(FB.db,"users",uid), {
+    name, avatar, online, lastSeen: FB.serverTimestamp()
+  }, { merge: true });
+}
+
+/* ── Presence ──────────────────────── */
+function listenPresence() {
+  presUnsub = FB.onSnapshot(FB.collection(FB.db,"users"), snap => {
+    snap.forEach(d => {
+      if (d.id === ME.uid) return;
+      const data = d.data();
+      document.getElementById("p-name").textContent = data.name || "المحادثة";
+      const dot = document.getElementById("p-dot");
+      const st  = document.getElementById("p-status");
+      if (data.online) {
+        dot.className = "odot on";
+        st.textContent = "متصل الآن ●";
+        st.className = "hst on";
+      } else {
+        dot.className = "odot";
+        st.textContent = "غير متصل";
+        st.className = "hst";
+      }
+      if (data.avatar) {
+        partnerAvatar = data.avatar;
+        const img = document.getElementById("p-av");
+        img.src = data.avatar; img.style.display="block";
+        document.getElementById("p-em").style.display="none";
+      }
+    });
+  });
+}
+
+/* ── Messages listener ─────────────── */
+function listenMessages() {
+  const q = FB.query(
+    FB.collection(FB.db,"messages"),
+    FB.orderBy("createdAt","asc")
+  );
+  msgUnsub = FB.onSnapshot(q, snap => {
+    if (snap.empty) return;
+    const wrap = document.getElementById("msgs");
+    const empty = document.getElementById("empty-state");
+    if (empty) empty.remove();
+    wrap.innerHTML = "";
+    let lastDay = "";
+    snap.forEach(d => {
+      const m   = d.data();
+      const isMe = m.uid === ME.uid;
+      const date = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+      const day  = date.toLocaleDateString("ar-DZ",{weekday:"long",day:"numeric",month:"long"});
+      const time = date.toLocaleTimeString("ar-DZ",{hour:"2-digit",minute:"2-digit"});
+      if (day!==lastDay) {
+        lastDay=day;
+        wrap.insertAdjacentHTML("beforeend",`<div class="day-sep"><span>${day}</span></div>`);
+      }
+      const avSrc = isMe ? (myAvatar||"") : partnerAvatar;
+      const avEl  = avSrc
+        ? `<img src="${avSrc}" />`
+        : `<span>${(m.authorName||"؟").charAt(0)}</span>`;
+
+      let content = "";
+      if (m.image) {
+        content = `<img src="${m.image}" onclick="lightbox(this.src)" loading="lazy" />`;
+        if (m.text) content += `<div>${escH(m.text)}</div>`;
+      } else {
+        content = escH(m.text||"");
+      }
+
+      wrap.insertAdjacentHTML("beforeend",`
+        <div class="brow ${isMe?"me":"other"}">
+          <div class="bav">${avEl}</div>
+          <div>
+            <div class="bub">${content}</div>
+            <div class="btime">${time}</div>
+          </div>
+        </div>`);
+    });
+    wrap.scrollTop = wrap.scrollHeight;
+  });
+}
+
+/* ── Send Message ──────────────────── */
+async function sendMsg() {
+  const text = document.getElementById("msg-in").value.trim();
+  if (!text && !imgToSend) return;
+
+  document.getElementById("s-btn").disabled = true;
+  document.getElementById("msg-in").value = "";
+  autoH(document.getElementById("msg-in"));
+
+  let imageData = null;
+  if (imgToSend) {
+    imageData = imgToSend.base64;
+    cancelImg();
+  }
+
+  try {
+    await FB.addDoc(FB.collection(FB.db,"messages"), {
+      text:       text || "",
+      image:      imageData || "",
+      uid:        ME.uid,
+      authorName: ME.displayName || ME.email,
+      createdAt:  FB.serverTimestamp()
+    });
+  } catch(e) {
+    toast("فشل إرسال الرسالة، حاول مرة أخرى.");
+  } finally {
+    document.getElementById("s-btn").disabled = false;
+    document.getElementById("msg-in").focus();
+  }
+}
+
+/* ── Image picker (chat) ───────────── */
+function pickImage(inp) {
+  const f = inp.files[0]; if (!f) return;
+
+  // Check size < 800KB (Firestore 1MB limit safety)
+  if (f.size > 800*1024) {
+    toast("الصورة كبيرة جداً (الحد 800 كيلوبايت). جرب ضغطها أولاً.");
+    inp.value = ""; return;
+  }
+
+  const r = new FileReader();
+  r.onload = e => {
+    imgToSend = { base64: e.target.result };
+    document.getElementById("img-preview-thumb").src = e.target.result;
+    document.getElementById("img-preview-bar").classList.remove("hidden");
+  };
+  r.readAsDataURL(f);
+  inp.value = "";
+}
+
+function cancelImg() {
+  imgToSend = null;
+  document.getElementById("img-preview-bar").classList.add("hidden");
+  document.getElementById("img-preview-thumb").src = "";
+}
+
+/* ── Lightbox ──────────────────────── */
+function lightbox(src) {
+  const lb = document.createElement("div");
+  lb.className = "lbox";
+  lb.innerHTML = `<img src="${src}" />`;
+  lb.onclick = () => lb.remove();
+  document.body.appendChild(lb);
+}
+
+/* ── Helpers ───────────────────────── */
+function onKey(e) { if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); } }
+function autoH(el) { el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,110)+"px"; }
+function v(id) { return document.getElementById(id).value.trim(); }
+function escH(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br/>"); }
+function resetMsgs() {
+  document.getElementById("msgs").innerHTML=`
+    <div class="empty" id="empty-state">
+      <div class="em">💌</div><h3>لا رسائل بعد</h3>
+      <p>كن أول من يبدأ!<br>أرسل رسالة أو صورة الآن 👋</p>
+    </div>`;
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2800);
+}
+function btnLoad(id, on) {
+  const b=document.getElementById(id);
+  b.disabled=on;
+  if(id==="r-btn") b.innerHTML=on?'<span class="spin"></span>':"إنشاء الحساب";
+  else             b.innerHTML=on?'<span class="spin"></span>':"دخول";
+}
+function ferr(c) {
+  return ({
+    "auth/email-already-in-use":"هذا البريد مستخدم مسبقاً.",
+    "auth/invalid-email":"صيغة البريد غير صحيحة.",
+    "auth/wrong-password":"كلمة المرور غير صحيحة.",
+    "auth/user-not-found":"لا يوجد حساب بهذا البريد.",
+    "auth/weak-password":"كلمة المرور ضعيفة جداً.",
+    "auth/network-request-failed":"تحقق من اتصالك بالإنترنت.",
+    "auth/invalid-credential":"البريد أو كلمة المرور غير صحيحة."
+  })[c] || "حدث خطأ، حاول مرة أخرى.";
+}
+</script>
+</body>
+</html>      --text: #e9edef; --muted: #8696a0; --me: #005c4b; --out: #202c33;
       --font: 'Cairo', sans-serif;
     }
 

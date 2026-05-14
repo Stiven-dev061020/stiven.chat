@@ -1,40 +1,253 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <!-- 1. تعديل الـ Meta Tags لضمان ملء الشاشة وحماية حواف الهواتف -->
+  <meta charset="UTF-8" />
+  <!-- Meta Tags مطورة لضمان عدم اهتزاز الشاشة أو اختفاء العناصر -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
-  <meta charset="UTF-8" />
   <title>stiven · دردشة خاصة</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-             updateProfile, onAuthStateChanged, signOut }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
-             serverTimestamp, doc, setDoc, updateDoc, getDoc }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
-      authDomain:        "stiven-chat.firebaseapp.com",
-      projectId:         "stiven-chat",
-      storageBucket:     "stiven-chat.firebasestorage.app",
+      apiKey: "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
+      authDomain: "stiven-chat.firebaseapp.com",
+      projectId: "stiven-chat",
+      storageBucket: "stiven-chat.firebasestorage.app",
       messagingSenderId: "1049787541567",
-      appId:             "1:1049787541567:web:8a8769ea7a7355d7cc308a",
-      measurementId:     "G-M0TTJ9NV0R"
+      appId: "1:1049787541567:web:8a8769ea7a7355d7cc308a",
+      measurementId: "G-M0TTJ9NV0R"
     };
 
-    const app  = initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db   = getFirestore(app);
+    const db = getFirestore(app);
+
+    window.__FB = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, updateDoc, getDoc };
+    window.dispatchEvent(new Event("fb-ready"));
+  </script>
+
+  <style>
+    :root {
+      --bg: #111b21; --surface: #202c33; --surface2: #2a3942;
+      --border: #3b4a54; --accent: #00a884; --accent2: #008069;
+      --text: #e9edef; --muted: #8696a0; --me: #005c4b; --out: #202c33;
+      --font: 'Cairo', sans-serif;
+    }
+
+    /* إصلاح الهيكل العام */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden; /* يمنع الصفحة من الهروب */
+      position: fixed; /* تثبيت الصفحة لمنع مشاكل التمرير في أندرويد */
+      width: 100%;
+    }
+
+    #auth-screen, #chat-screen {
+      height: 100dvh; /* استخدام وحدة Dynamic Viewport Height */
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .hidden { display: none !important; }
+
+    /* AUTH SCREEN */
+    #auth-screen { align-items: center; justify-content: center; background: radial-gradient(circle at top, #00a8841a, transparent), var(--bg); }
+    .card { width: 90%; max-width: 400px; background: var(--surface); padding: 30px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo-icon { font-size: 40px; background: var(--accent); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 15px; margin: 0 auto 10px; }
+    .tabs { display: flex; gap: 5px; background: var(--bg); padding: 5px; border-radius: 10px; margin-bottom: 20px; }
+    .tab { flex: 1; border: none; padding: 10px; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-family: var(--font); }
+    .tab.active { background: var(--surface2); color: #fff; }
+    .fg { margin-bottom: 15px; }
+    .fg label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .fg input { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: #fff; outline: none; }
+    .btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; }
+
+    /* CHAT SCREEN */
+    .hdr { 
+      padding: 10px 15px; background: var(--surface); 
+      border-bottom: 1px solid var(--border); 
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .hav { width: 40px; height: 40px; border-radius: 50%; background: var(--surface2); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .hav img { width: 100%; height: 100%; object-fit: cover; }
+    .hinfo h2 { font-size: 16px; margin: 0; }
+    .hst { font-size: 12px; color: var(--muted); }
+
+    .msgs {
+      flex: 1; /* تأخذ كل المساحة المتاحة */
+      overflow-y: auto;
+      padding: 15px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .brow { display: flex; flex-direction: column; max-width: 80%; }
+    .brow.me { align-self: flex-end; align-items: flex-end; }
+    .brow.other { align-self: flex-start; align-items: flex-start; }
+    .bub { padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; position: relative; }
+    .brow.me .bub { background: var(--me); color: #fff; border-bottom-right-radius: 2px; }
+    .brow.other .bub { background: var(--surface2); color: #fff; border-bottom-left-radius: 2px; }
+    .btime { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    /* ── أهم جزء: شريط الكتابة المرفوع ── */
+    .bar {
+      padding: 10px 15px;
+      /* رفع إجباري للشريط ليتجاوز أزرار الهاتف */
+      padding-bottom: calc(30px + env(safe-area-inset-bottom)); 
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0; /* يمنع الشريط من الاختفاء مهما حدث */
+      z-index: 100;
+    }
+    .tinput {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 10px 15px;
+      color: #fff;
+      font-family: var(--font);
+      outline: none;
+      max-height: 100px;
+      resize: none;
+    }
+    .sbtn {
+      width: 45px; height: 45px; border-radius: 50%;
+      background: var(--accent); border: none; color: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+
+    #footer-credit {
+      position: absolute; bottom: 5px; width: 100%; text-align: center;
+      font-size: 10px; color: #3b4a54; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="card">
+    <div class="logo"><div class="logo-icon">💬</div><h1>stiven</h1></div>
+    <div class="tabs">
+      <button class="tab active" id="t-login" onclick="switchTab('login')">دخول</button>
+      <button class="tab" id="t-reg" onclick="switchTab('reg')">جديد</button>
+    </div>
+    <div id="reg-form" class="hidden">
+      <div class="fg"><label>الاسم الكامل</label><input type="text" id="r-name" placeholder="عبد الرحمان"></div>
+      <div class="fg"><label>البريد</label><input type="email" id="r-email"></div>
+      <div class="fg"><label>كلمة السر</label><input type="password" id="r-pass"></div>
+      <button class="btn" onclick="doRegister()">إنشاء حساب</button>
+    </div>
+    <div id="log-form">
+      <div class="fg"><label>البريد</label><input type="email" id="l-email"></div>
+      <div class="fg"><label>كلمة السر</label><input type="password" id="l-pass"></div>
+      <button class="btn" onclick="doLogin()">دخول</button>
+    </div>
+  </div>
+</div>
+
+<div id="chat-screen" class="hidden">
+  <div class="hdr">
+    <div class="hav"><img id="p-av" src="" style="display:none"><span>👤</span></div>
+    <div class="hinfo"><h2 id="p-name">المحادثة</h2><div class="hst" id="p-status">متصل الآن</div></div>
+    <div style="flex:1"></div>
+    <button onclick="doLogout()" style="background:none; border:none; color:var(--muted); cursor:pointer">خروج</button>
+  </div>
+  
+  <div class="msgs" id="msgs"></div>
+
+  <div class="bar">
+    <textarea class="tinput" id="msg-in" placeholder="اكتب رسالة..." rows="1"></textarea>
+    <button class="sbtn" onclick="sendMsg()">➤</button>
+  </div>
+  
+  <div id="footer-credit">Engineered by abderahmane belkhir</div>
+</div>
+
+<script>
+  let FB, ME;
+
+  window.addEventListener("fb-ready", () => {
+    FB = window.__FB;
+    FB.onAuthStateChanged(FB.auth, user => { if(user) { ME = user; enterChat(); } });
+  });
+
+  function switchTab(t) {
+    document.getElementById("t-login").classList.toggle("active", t==='login');
+    document.getElementById("t-reg").classList.toggle("active", t==='reg');
+    document.getElementById("log-form").classList.toggle("hidden", t!=='login');
+    document.getElementById("reg-form").classList.toggle("hidden", t!=='reg');
+  }
+
+  async function doRegister() {
+    const n = document.getElementById("r-name").value, e = document.getElementById("r-email").value, p = document.getElementById("r-pass").value;
+    const c = await FB.createUserWithEmailAndPassword(FB.auth, e, p);
+    await FB.updateProfile(c.user, { displayName: n });
+    await FB.setDoc(FB.doc(FB.db, "users", c.user.uid), { name: n, online: true });
+  }
+
+  async function doLogin() {
+    const e = document.getElementById("l-email").value, p = document.getElementById("l-pass").value;
+    await FB.signInWithEmailAndPassword(FB.auth, e, p);
+  }
+
+  function doLogout() { FB.signOut(FB.auth).then(() => location.reload()); }
+
+  function enterChat() {
+    document.getElementById("auth-screen").classList.add("hidden");
+    document.getElementById("chat-screen").classList.remove("hidden");
+    FB.updateDoc(FB.doc(FB.db, "users", ME.uid), { online: true });
+    listenMsgs();
+  }
+
+  function listenMsgs() {
+    const q = FB.query(FB.collection(FB.db, "messages"), FB.orderBy("createdAt", "asc"));
+    FB.onSnapshot(q, snap => {
+      const box = document.getElementById("msgs");
+      box.innerHTML = "";
+      snap.forEach(d => {
+        const m = d.data();
+        const isMe = m.uid === ME.uid;
+        box.insertAdjacentHTML("beforeend", `
+          <div class="brow ${isMe?'me':'other'}">
+            <div class="bub">${m.text}</div>
+            <div class="btime">${m.createdAt?.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) || ''}</div>
+          </div>`);
+      });
+      box.scrollTop = box.scrollHeight;
+    });
+  }
+
+  async function sendMsg() {
+    const inp = document.getElementById("msg-in"), txt = inp.value.trim();
+    if(!txt) return;
+    inp.value = "";
+    await FB.addDoc(FB.collection(FB.db, "messages"), { text: txt, uid: ME.uid, createdAt: FB.serverTimestamp() });
+  }
+</script>
+</body>
+</html>    const db   = getFirestore(app);
 
     window.__FB = {
       auth, db,

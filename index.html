@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <!-- 1. تعديل الـ Meta Tags لضمان ملء الشاشة وحماية حواف الهواتف -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>stiven · دردشة خاصة</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
@@ -17,9 +22,6 @@
              serverTimestamp, doc, setDoc, updateDoc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    /* ══════════════════════════════════════════════
-       🔥 Firebase Config — بيانات مشروع stiven
-    ══════════════════════════════════════════════ */
     const firebaseConfig = {
       apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
       authDomain:        "stiven-chat.firebaseapp.com",
@@ -29,7 +31,6 @@
       appId:             "1:1049787541567:web:8a8769ea7a7355d7cc308a",
       measurementId:     "G-M0TTJ9NV0R"
     };
-    /* ══════════════════════════════════════════════ */
 
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -63,7 +64,17 @@
       --r:         14px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
+    
+    /* 2. تعديل الـ Body لضمان عدم الاختفاء خلف أزرار النظام */
+    html, body { 
+      height: 100%; 
+      font-family: var(--font); 
+      background: var(--bg); 
+      color: var(--text); 
+      overflow: hidden; 
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .hidden { display: none !important; }
@@ -212,10 +223,12 @@
     .brow.me .btime { text-align: right; }
     .brow.me .btime::after { content: ' ✓✓'; color: var(--accent); }
 
-    /* Input bar */
+    /* 3. تعديل الـ Bar لرفع منطقة الكتابة وحماية منطقة الأزرار السفليّة */
     .bar {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; background: var(--surface);
+      padding: 10px 14px; 
+      padding-bottom: calc(12px + env(safe-area-inset-bottom)); /* رفع تلقائي */
+      background: var(--surface);
       border-top: 1px solid var(--border); flex-shrink: 0;
     }
     .img-btn {
@@ -381,7 +394,7 @@
 <div class="toast" id="toast"></div>
 
 <div id="footer-credit" style="
-  position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: calc(env(safe-area-inset-bottom) + 5px); left: 50%; transform: translateX(-50%);
   font-family: 'Cairo', sans-serif; font-size: .7rem;
   color: #3b4a54; letter-spacing: .3px; pointer-events: none;
   user-select: none; white-space: nowrap;
@@ -481,7 +494,6 @@ async function enterChat() {
   document.getElementById("auth-screen").classList.add("hidden");
   document.getElementById("chat-screen").classList.remove("hidden");
 
-  // Load my avatar from Firestore if not set yet
   if (!myAvatar) {
     try {
       const snap = await FB.getDoc(FB.doc(FB.db,"users",ME.uid));
@@ -617,7 +629,6 @@ async function sendMsg() {
 function pickImage(inp) {
   const f = inp.files[0]; if (!f) return;
 
-  // Check size < 800KB (Firestore 1MB limit safety)
   if (f.size > 800*1024) {
     toast("الصورة كبيرة جداً (الحد 800 كيلوبايت). جرب ضغطها أولاً.");
     inp.value = ""; return;

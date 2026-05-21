@@ -177,6 +177,698 @@
     .msgs {
       flex: 1; overflow-y: auto; padding: 16px 14px;
       display: flex; flex-direction: column; gap: 4px;
+      position: relative; overflow-x: hidden;
+      background: var(--bg);
+    }
+
+    /* ── Ambient blobs ── */
+    .blob-wrap {
+      position: absolute; inset: 0; pointer-events: none;
+      overflow: hidden; z-index: 0;
+    }
+    .blob {
+      position: absolute; border-radius: 50%;
+      filter: blur(72px);
+      opacity: 0;
+      transition: background .8s ease;
+      animation: blobFloat linear infinite;
+    }
+    .blob:nth-child(1) { width: 340px; height: 340px; animation-duration: 22s; animation-delay: 0s;   top: 5%;  left: -10%; }
+    .blob:nth-child(2) { width: 280px; height: 280px; animation-duration: 28s; animation-delay: -8s;  top: 40%; right: -8%; }
+    .blob:nth-child(3) { width: 220px; height: 220px; animation-duration: 18s; animation-delay: -14s; top: 65%; left: 20%; }
+    @keyframes blobFloat {
+      0%   { transform: translateY(0px)   scale(1);    opacity: var(--blob-op); }
+      33%  { transform: translateY(-28px) scale(1.06); opacity: var(--blob-op); }
+      66%  { transform: translateY(18px)  scale(.95);  opacity: var(--blob-op); }
+      100% { transform: translateY(0px)   scale(1);    opacity: var(--blob-op); }
+    }
+    /* messages sit above blobs */
+    .msgs > *:not(.blob-wrap) { position: relative; z-index: 1; }
+
+    .day-sep { text-align: center; margin: 10px 0; }
+    .day-sep span {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 13px;
+      font-size: .7rem; color: var(--muted);
+    }
+
+    .brow {
+      display: flex; align-items: flex-end; gap: 7px;
+      max-width: 68%; animation: pop .2s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes pop { from { opacity:0; transform:scale(.88) translateY(6px) } to { opacity:1; transform:none } }
+    .brow.me    { align-self: flex-end;   flex-direction: row-reverse; }
+    .brow.other { align-self: flex-start; }
+
+    .bav { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .bav img { width: 100%; height: 100%; object-fit: cover; }
+
+    .bub {
+      padding: 8px 12px 6px; border-radius: 12px;
+      font-size: .88rem; line-height: 1.55; max-width: 100%; word-break: break-word;
+    }
+    .brow.me    .bub { background: var(--me);  border-bottom-left-radius: 3px; }
+    .brow.other .bub { background: var(--out); border-bottom-right-radius: 3px; border: 1px solid var(--border); }
+    .bub img { max-width: 260px; max-height: 300px; border-radius: 9px; display: block; margin-top: 4px; cursor: pointer; }
+
+    .btime { font-size: .63rem; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+    .brow.me .btime { text-align: right; }
+    .brow.me .btime::after { content: ' ✓✓'; color: var(--accent); }
+
+    /* Input bar */
+    .bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; background: var(--surface);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .img-btn {
+      background: none; border: none; color: var(--muted); font-size: 1.25rem;
+      cursor: pointer; padding: 6px; border-radius: 8px; transition: color .15s;
+      flex-shrink: 0;
+    }
+    .img-btn:hover { color: var(--accent); }
+    .tinput {
+      flex: 1; padding: 10px 15px; background: var(--surface2);
+      border: 1.5px solid var(--border); border-radius: 22px;
+      color: var(--text); font-family: var(--font); font-size: .9rem;
+      outline: none; resize: none; max-height: 110px; line-height: 1.4;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .tinput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .tinput::placeholder { color: var(--muted); }
+    .sbtn {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; color: #fff; font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 3px 14px var(--glow);
+    }
+    .sbtn:hover  { transform: scale(1.08); }
+    .sbtn:active { transform: scale(.95); }
+    .sbtn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* Image preview before send */
+    .img-preview-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; background: var(--surface2);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .img-preview-bar img { height: 60px; border-radius: 8px; object-fit: cover; }
+    .img-preview-bar .cancel { background: none; border: none; color: var(--red); font-size: 1.2rem; cursor: pointer; margin-right: auto; }
+    .img-preview-bar span { font-size: .82rem; color: var(--muted); }
+
+    /* Typing dots */
+    .typing { display: flex; align-items: center; gap: 4px; padding: 8px 13px; background: var(--out); border: 1px solid var(--border); border-radius: 12px; border-bottom-right-radius: 3px; width: fit-content; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s ease-in-out infinite; }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce { 0%,60%,100% { transform:translateY(0) } 30% { transform:translateY(-5px) } }
+
+    /* Empty state */
+    .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:10px; padding:40px; text-align:center; }
+    .empty .em { font-size: 3.5rem; }
+    .empty h3  { color: var(--text); font-size: 1.1rem; }
+    .empty p   { font-size: .83rem; line-height: 1.6; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 11px;
+      padding: 9px 18px; font-size: .83rem; opacity: 0; pointer-events: none;
+      transition: all .28s; z-index: 99;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Lightbox */
+    .lbox { position:fixed; inset:0; background:rgba(0,0,0,.88); display:flex; align-items:center; justify-content:center; z-index:999; cursor:zoom-out; }
+    .lbox img { max-width:90vw; max-height:90vh; border-radius:10px; }
+
+    /* Spinner */
+    .spin { width:18px; height:18px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation: sp .7s linear infinite; display:inline-block; }
+    @keyframes sp { to { transform:rotate(360deg) } }
+
+    /* Upload progress */
+    .up-progress { font-size: .78rem; color: var(--accent); margin-right: auto; }
+
+    /* ── Gender selector ── */
+    .gender-group { margin-bottom: 14px; }
+    .gender-group label.group-label {
+      display: block; font-size: .72rem; color: var(--muted);
+      margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .gender-options { display: flex; gap: 10px; }
+    .gender-options input[type="radio"] { display: none; }
+    .gender-options label {
+      flex: 1; padding: 9px 0; border-radius: 10px; cursor: pointer;
+      text-align: center; font-size: .88rem; font-weight: 600;
+      border: 1.5px solid var(--border); color: var(--muted);
+      background: var(--bg); transition: all .22s; user-select: none;
+    }
+    .gender-options input[type="radio"]:checked + label {
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(0,168,132,.1); box-shadow: 0 0 0 2px var(--glow);
+    }
+    .gender-options label:hover { border-color: var(--border); color: var(--text); background: var(--surface2); }
+
+    /* ── Color circles ── */
+    #color-picker-container {
+      display: flex; flex-wrap: wrap; gap: 9px;
+      margin-bottom: 14px; padding: 12px 14px;
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 12px; animation: up .3s cubic-bezier(.16,1,.3,1);
+    }
+    .color-circle {
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; flex-shrink: 0;
+      transition: transform .18s, box-shadow .18s, border-color .18s;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .color-circle:hover {
+      transform: scale(1.18);
+      box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    }
+    .color-circle.selected {
+      border-color: #fff;
+      transform: scale(1.22);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.25), 0 4px 16px rgba(0,0,0,.5);
+    }
+
+    @media (max-width:520px) {
+      .card { width:95vw; padding:28px 18px; }
+      .brow { max-width:85%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH ═══════════ -->
+<div id="auth-screen">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">💬</div>
+      <h1>stiven</h1>
+      <p>دردشتك الخاصة · لا أحد غيركما</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">تسجيل الدخول</button>
+      <button class="tab"        onclick="switchTab('reg')">حساب جديد</button>
+    </div>
+
+    <div id="auth-err" class="err hidden"></div>
+
+    <!-- Register -->
+    <div id="reg-form">
+      <div class="av-pick">
+        <div class="av-ring" id="av-ring" onclick="document.getElementById('av-file').click()">📷</div>
+        <input type="file" id="av-file" accept="image/*" class="hidden" onchange="pickAvatar(this)" />
+        <small>صورتك الشخصية<br><span onclick="document.getElementById('av-file').click()">اختر صورة</span></small>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>الاسم</label><input type="text" id="r-first" placeholder="عبد الرحمان" /></div>
+        <div class="fg"><label>اللقب</label><input type="text" id="r-last"  placeholder="بلخير" /></div>
+      </div>
+      <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="r-email" placeholder="belkhir@mail.com" /></div>
+      <div class="fg"><label>كلمة المرور</label><input type="password" id="r-pass" placeholder="6 أحرف على الأقل" /></div>
+
+      <!-- ── Gender ── -->
+      <div class="gender-group">
+        <label class="group-label">الجنس</label>
+        <div class="gender-options">
+          <input type="radio" name="gender" id="g-male"   value="male" />
+          <label for="g-male"   onclick="onGenderChange('male')">👨 ذكر</label>
+          <input type="radio" name="gender" id="g-female" value="female" />
+          <label for="g-female" onclick="onGenderChange('female')">👩 أنثى</label>
+        </div>
+      </div>
+
+      <!-- ── Theme color picker ── -->
+      <div id="color-picker-container" class="hidden"></div>
+
+      <button class="btn" id="r-btn" onclick="doRegister()">إنشاء الحساب</button>
+    </div>
+
+    <!-- Login -->
+    <div id="log-form" class="hidden">
+      <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="l-email" placeholder="belkhir@mail.com" /></div>
+      <div class="fg"><label>كلمة المرور</label><input type="password" id="l-pass" placeholder="••••••••" /></div>
+      <button class="btn" id="l-btn" onclick="doLogin()">دخول</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CHAT ═══════════ -->
+<div id="chat-screen" class="hidden">
+
+  <div class="hdr">
+    <div class="hav">
+      <img id="p-av" src="" alt="" style="display:none" />
+      <span id="p-em">👤</span>
+      <div class="odot" id="p-dot"></div>
+    </div>
+    <div class="hinfo">
+      <h2 id="p-name">—</h2>
+      <div class="hst" id="p-status">جارٍ التحميل...</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iBtn" title="خروج" onclick="doLogout()">⏏️</button>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="empty" id="empty-state">
+      <div class="em">💌</div>
+      <h3>لا رسائل بعد</h3>
+      <p>كن أول من يبدأ!<br>أرسل رسالة أو صورة الآن 👋</p>
+    </div>
+  </div>
+
+  <!-- Image preview before sending -->
+  <div class="img-preview-bar hidden" id="img-preview-bar">
+    <img id="img-preview-thumb" src="" alt="" />
+    <span>جاهزة للإرسال</span>
+    <button class="cancel" onclick="cancelImg()">✕</button>
+  </div>
+
+  <div class="bar">
+    <button class="img-btn" title="إرسال صورة" onclick="document.getElementById('img-input').click()">🖼️</button>
+    <input type="file" id="img-input" accept="image/*" class="hidden" onchange="pickImage(this)" />
+    <textarea class="tinput" id="msg-in" rows="1" placeholder="اكتب رسالتك..."
+      onkeydown="onKey(event)" oninput="autoH(this)"></textarea>
+    <button class="sbtn" id="s-btn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="footer-credit" style="
+  position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cairo', sans-serif; font-size: .7rem;
+  color: #3b4a54; letter-spacing: .3px; pointer-events: none;
+  user-select: none; white-space: nowrap;
+">
+  Powered by Meta Platforms, Inc. &nbsp;·&nbsp; Engineered by <span style="color:#4a5568">abderahmane belkhir</span>
+</div>
+
+<!-- ═══════════ SCRIPT ═══════════ -->
+<script>
+/* ── State ─────────────────────────── */
+let FB        = null;
+let ME        = null;
+let myAvatar  = null;   // base64 or ""
+let imgToSend = null;   // { base64, file } pending image
+let msgUnsub  = null;
+let presUnsub = null;
+let partnerAvatar = "";
+let selectedThemeColor = "#00a884";  // default
+let selectedGender     = "";
+
+/* ── Firebase Ready ────────────────── */
+window.addEventListener("fb-ready", () => {
+  FB = window.__FB;
+  FB.onAuthStateChanged(FB.auth, user => {
+    if (user) { ME = user; enterChat(); }
+  });
+});
+
+/* ── Tabs ──────────────────────────── */
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach((el,i) =>
+    el.classList.toggle("active", t==="login" ? i===0 : i===1));
+  document.getElementById("reg-form").classList.toggle("hidden", t!=="reg");
+  document.getElementById("log-form").classList.toggle("hidden", t!=="login");
+  clearErr();
+}
+
+function showErr(m) {
+  const el = document.getElementById("auth-err");
+  el.textContent = m; el.classList.remove("hidden");
+}
+function clearErr() { document.getElementById("auth-err").classList.add("hidden"); }
+
+/* ── Avatar picker (auth) ──────────── */
+function pickAvatar(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    myAvatar = e.target.result;
+    const ring = document.getElementById("av-ring");
+    ring.innerHTML = `<img src="${myAvatar}" />`;
+  };
+  r.readAsDataURL(f);
+}
+
+/* ── Gender & Color picker ────────── */
+const COLORS = {
+  male: [
+    "#1a73e8","#0d47a1","#1565c0","#0288d1","#006064",
+    "#2e7d32","#37474f","#455a64","#263238","#4527a0"
+  ],
+  female: [
+    "#e91e63","#c2185b","#ad1457","#880e4f","#ce93d8",
+    "#ba68c8","#ab47bc","#9c27b0","#f48fb1","#f06292"
+  ]
+};
+
+function onGenderChange(gender) {
+  selectedGender = gender;
+  selectedThemeColor = COLORS[gender][0];
+  const container = document.getElementById("color-picker-container");
+  container.classList.remove("hidden");
+  container.innerHTML = "";
+  COLORS[gender].forEach(hex => {
+    const c = document.createElement("div");
+    c.className = "color-circle" + (hex === selectedThemeColor ? " selected" : "");
+    c.style.background = hex;
+    c.title = hex;
+    c.onclick = () => {
+      selectedThemeColor = hex;
+      document.querySelectorAll(".color-circle").forEach(el => el.classList.remove("selected"));
+      c.classList.add("selected");
+    };
+    container.appendChild(c);
+  });
+}
+
+/* ── Register ──────────────────────── */
+async function doRegister() {
+  if (!FB) return showErr("Firebase لم يتصل بعد.");
+  const first = v("r-first"), last = v("r-last"),
+        email = v("r-email"), pass  = v("r-pass");
+  if (!first||!last) return showErr("أدخل الاسم واللقب.");
+  if (!email)        return showErr("أدخل البريد الإلكتروني.");
+  if (pass.length<6) return showErr("كلمة المرور أقل من 6 أحرف.");
+  clearErr(); btnLoad("r-btn", true);
+  try {
+    const cred = await FB.createUserWithEmailAndPassword(FB.auth, email, pass);
+    await FB.updateProfile(cred.user, { displayName: `${first} ${last}` });
+    await saveProfile(cred.user.uid, `${first} ${last}`, myAvatar||"", false, selectedGender, selectedThemeColor);
+    ME = cred.user;
+    enterChat();
+  } catch(e) { showErr(ferr(e.code)); }
+  finally    { btnLoad("r-btn", false); }
+}
+
+/* ── Login ─────────────────────────── */
+async function doLogin() {
+  if (!FB) return showErr("Firebase لم يتصل بعد.");
+  const email = v("l-email"), pass = v("l-pass");
+  if (!email||!pass) return showErr("أدخل البريد وكلمة المرور.");
+  clearErr(); btnLoad("l-btn", true);
+  try {
+    await FB.signInWithEmailAndPassword(FB.auth, email, pass);
+  } catch(e) { showErr(ferr(e.code)); btnLoad("l-btn", false); }
+}
+
+/* ── Logout ────────────────────────── */
+async function doLogout() {
+  if (ME) await FB.updateDoc(FB.doc(FB.db,"users",ME.uid), { online:false });
+  if (msgUnsub)  msgUnsub();
+  if (presUnsub) presUnsub();
+  await FB.signOut(FB.auth);
+  document.getElementById("chat-screen").classList.add("hidden");
+  document.getElementById("auth-screen").classList.remove("hidden");
+  resetMsgs(); ME = null;
+}
+
+/* ── Apply theme color ─────────────── */
+function applyTheme(hex) {
+  if (!hex) return;
+  selectedThemeColor = hex;
+  const root = document.documentElement.style;
+  root.setProperty("--accent",  hex);
+  root.setProperty("--accent2", shadeHex(hex, -25));
+  root.setProperty("--glow",    hexToRgba(hex, .18));
+  root.setProperty("--me",      shadeHex(hex, -55));
+  // update odot.on shadow live
+  document.querySelector(".odot.on")?.style.setProperty("box-shadow", `0 0 6px ${hexToRgba(hex,.7)}`);
+  // update blobs
+  initBlobs(hex);
+}
+
+function initBlobs(hex) {
+  const wrap = document.getElementById("blob-wrap");
+  if (!wrap) return;
+  const shades = [hex, shadeHex(hex, 30), shadeHex(hex, -30)];
+  wrap.querySelectorAll(".blob").forEach((b, i) => {
+    b.style.background = shades[i % shades.length];
+    b.style.setProperty("--blob-op", "0.07");
+  });
+}
+
+/* hex helpers */
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16),
+        g = parseInt(hex.slice(3,5),16),
+        b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function shadeHex(hex, pct) {
+  let r=parseInt(hex.slice(1,3),16),
+      g=parseInt(hex.slice(3,5),16),
+      b=parseInt(hex.slice(5,7),16);
+  r = Math.min(255,Math.max(0, r + Math.round(2.55*pct)));
+  g = Math.min(255,Math.max(0, g + Math.round(2.55*pct)));
+  b = Math.min(255,Math.max(0, b + Math.round(2.55*pct)));
+  return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+
+/* ── Enter Chat ────────────────────── */
+async function enterChat() {
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("chat-screen").classList.remove("hidden");
+
+  // Inject blob layer into #msgs (once)
+  if (!document.getElementById("blob-wrap")) {
+    const wrap = document.createElement("div");
+    wrap.className = "blob-wrap"; wrap.id = "blob-wrap";
+    wrap.innerHTML = '<div class="blob"></div><div class="blob"></div><div class="blob"></div>';
+    document.getElementById("msgs").prepend(wrap);
+  }
+
+  // Fetch user profile from Firestore
+  try {
+    const snap = await FB.getDoc(FB.doc(FB.db,"users",ME.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (!myAvatar) myAvatar = data.avatar || "";
+      if (data.themeColor) applyTheme(data.themeColor);
+    }
+  } catch(_) {}
+
+  await saveProfile(ME.uid, ME.displayName||ME.email, myAvatar||"", true);
+
+  listenPresence();
+  listenMessages();
+
+  window.addEventListener("beforeunload", () => {
+    FB.updateDoc(FB.doc(FB.db,"users",ME.uid),{online:false}).catch(()=>{});
+  });
+}
+
+async function saveProfile(uid, name, avatar, online=false, gender="", themeColor="") {
+  const data = { name, avatar, online, lastSeen: FB.serverTimestamp() };
+  if (gender)     data.gender     = gender;
+  if (themeColor) data.themeColor = themeColor;
+  await FB.setDoc(FB.doc(FB.db,"users",uid), data, { merge: true });
+}
+
+/* ── Presence ──────────────────────── */
+function listenPresence() {
+  presUnsub = FB.onSnapshot(FB.collection(FB.db,"users"), snap => {
+    snap.forEach(d => {
+      if (d.id === ME.uid) return;
+      const data = d.data();
+      document.getElementById("p-name").textContent = data.name || "المحادثة";
+      const dot = document.getElementById("p-dot");
+      const st  = document.getElementById("p-status");
+      if (data.online) {
+        dot.className = "odot on";
+        st.textContent = "متصل الآن ●";
+        st.className = "hst on";
+      } else {
+        dot.className = "odot";
+        st.textContent = "غير متصل";
+        st.className = "hst";
+      }
+      if (data.avatar) {
+        partnerAvatar = data.avatar;
+        const img = document.getElementById("p-av");
+        img.src = data.avatar; img.style.display="block";
+        document.getElementById("p-em").style.display="none";
+      }
+    });
+  });
+}
+
+/* ── Messages listener ─────────────── */
+function listenMessages() {
+  const q = FB.query(
+    FB.collection(FB.db,"messages"),
+    FB.orderBy("createdAt","asc")
+  );
+  msgUnsub = FB.onSnapshot(q, snap => {
+    if (snap.empty) return;
+    const wrap = document.getElementById("msgs");
+    const empty = document.getElementById("empty-state");
+    if (empty) empty.remove();
+    wrap.innerHTML = "";
+    let lastDay = "";
+    snap.forEach(d => {
+      const m   = d.data();
+      const isMe = m.uid === ME.uid;
+      const date = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+      const day  = date.toLocaleDateString("ar-DZ",{weekday:"long",day:"numeric",month:"long"});
+      const time = date.toLocaleTimeString("ar-DZ",{hour:"2-digit",minute:"2-digit"});
+      if (day!==lastDay) {
+        lastDay=day;
+        wrap.insertAdjacentHTML("beforeend",`<div class="day-sep"><span>${day}</span></div>`);
+      }
+      const avSrc = isMe ? (myAvatar||"") : partnerAvatar;
+      const avEl  = avSrc
+        ? `<img src="${avSrc}" />`
+        : `<span>${(m.authorName||"؟").charAt(0)}</span>`;
+
+      let content = "";
+      if (m.image) {
+        content = `<img src="${m.image}" onclick="lightbox(this.src)" loading="lazy" />`;
+        if (m.text) content += `<div>${escH(m.text)}</div>`;
+      } else {
+        content = escH(m.text||"");
+      }
+
+      wrap.insertAdjacentHTML("beforeend",`
+        <div class="brow ${isMe?"me":"other"}">
+          <div class="bav">${avEl}</div>
+          <div>
+            <div class="bub">${content}</div>
+            <div class="btime">${time}</div>
+          </div>
+        </div>`);
+    });
+    wrap.scrollTop = wrap.scrollHeight;
+  });
+}
+
+/* ── Send Message ──────────────────── */
+async function sendMsg() {
+  const text = document.getElementById("msg-in").value.trim();
+  if (!text && !imgToSend) return;
+
+  document.getElementById("s-btn").disabled = true;
+  document.getElementById("msg-in").value = "";
+  autoH(document.getElementById("msg-in"));
+
+  let imageData = null;
+  if (imgToSend) {
+    imageData = imgToSend.base64;
+    cancelImg();
+  }
+
+  try {
+    await FB.addDoc(FB.collection(FB.db,"messages"), {
+      text:       text || "",
+      image:      imageData || "",
+      uid:        ME.uid,
+      authorName: ME.displayName || ME.email,
+      createdAt:  FB.serverTimestamp()
+    });
+  } catch(e) {
+    toast("فشل إرسال الرسالة، حاول مرة أخرى.");
+  } finally {
+    document.getElementById("s-btn").disabled = false;
+    document.getElementById("msg-in").focus();
+  }
+}
+
+/* ── Image picker (chat) ───────────── */
+function pickImage(inp) {
+  const f = inp.files[0]; if (!f) return;
+
+  // Check size < 800KB (Firestore 1MB limit safety)
+  if (f.size > 800*1024) {
+    toast("الصورة كبيرة جداً (الحد 800 كيلوبايت). جرب ضغطها أولاً.");
+    inp.value = ""; return;
+  }
+
+  const r = new FileReader();
+  r.onload = e => {
+    imgToSend = { base64: e.target.result };
+    document.getElementById("img-preview-thumb").src = e.target.result;
+    document.getElementById("img-preview-bar").classList.remove("hidden");
+  };
+  r.readAsDataURL(f);
+  inp.value = "";
+}
+
+function cancelImg() {
+  imgToSend = null;
+  document.getElementById("img-preview-bar").classList.add("hidden");
+  document.getElementById("img-preview-thumb").src = "";
+}
+
+/* ── Lightbox ──────────────────────── */
+function lightbox(src) {
+  const lb = document.createElement("div");
+  lb.className = "lbox";
+  lb.innerHTML = `<img src="${src}" />`;
+  lb.onclick = () => lb.remove();
+  document.body.appendChild(lb);
+}
+
+/* ── Helpers ───────────────────────── */
+function onKey(e) { if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); } }
+function autoH(el) { el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,110)+"px"; }
+function v(id) { return document.getElementById(id).value.trim(); }
+function escH(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br/>"); }
+function resetMsgs() {
+  document.getElementById("msgs").innerHTML=`
+    <div class="empty" id="empty-state">
+      <div class="em">💌</div><h3>لا رسائل بعد</h3>
+      <p>كن أول من يبدأ!<br>أرسل رسالة أو صورة الآن 👋</p>
+    </div>`;
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2800);
+}
+function btnLoad(id, on) {
+  const b=document.getElementById(id);
+  b.disabled=on;
+  if(id==="r-btn") b.innerHTML=on?'<span class="spin"></span>':"إنشاء الحساب";
+  else             b.innerHTML=on?'<span class="spin"></span>':"دخول";
+}
+function ferr(c) {
+  return ({
+    "auth/email-already-in-use":"هذا البريد مستخدم مسبقاً.",
+    "auth/invalid-email":"صيغة البريد غير صحيحة.",
+    "auth/wrong-password":"كلمة المرور غير صحيحة.",
+    "auth/user-not-found":"لا يوجد حساب بهذا البريد.",
+    "auth/weak-password":"كلمة المرور ضعيفة جداً.",
+    "auth/network-request-failed":"تحقق من اتصالك بالإنترنت.",
+    "auth/invalid-credential":"البريد أو كلمة المرور غير صحيحة."
+  })[c] || "حدث خطأ، حاول مرة أخرى.";
+}
+</script>
+</body>
+</html>      background: #555; transition: background .4s;
+    }
+    .odot.on { background: var(--accent); box-shadow: 0 0 6px rgba(0,168,132,.7); }
+    .hinfo h2 { font-size: .98rem; font-weight: 700; }
+    .hst { font-size: .73rem; color: var(--muted); }
+    .hst.on { color: var(--accent); }
+    .hdr .spacer { flex: 1; }
+    .iBtn {
+      background: none; border: none; color: var(--muted); font-size: 1.05rem;
+      cursor: pointer; padding: 7px; border-radius: 8px; transition: background .15s, color .15s;
+    }
+    .iBtn:hover { background: var(--border); color: var(--text); }
+
+    /* Messages */
+    .msgs {
+      flex: 1; overflow-y: auto; padding: 16px 14px;
+      display: flex; flex-direction: column; gap: 4px;
       background:
         url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
         var(--bg);

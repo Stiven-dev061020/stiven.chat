@@ -1,40 +1,267 @@
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>stiven · دردشة خاصة</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>stiven · دردشة خاصة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-             updateProfile, onAuthStateChanged, signOut }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
-             serverTimestamp, doc, setDoc, updateDoc, getDoc }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+serverTimestamp, doc, setDoc, updateDoc, getDoc, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    /* ══════════════════════════════════════════════
-       🔥 Firebase Config — بيانات مشروع stiven
-    ══════════════════════════════════════════════ */
-    const firebaseConfig = {
-      apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
-      authDomain:        "stiven-chat.firebaseapp.com",
-      projectId:         "stiven-chat",
-      storageBucket:     "stiven-chat.firebasestorage.app",
-      messagingSenderId: "1049787541567",
-      appId:             "1:1049787541567:web:8a8769ea7a7355d7cc308a",
-      measurementId:     "G-M0TTJ9NV0R"
-    };
-    /* ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+🔥 Firebase Config — بيانات مشروع stiven
+══════════════════════════════════════════════ */
+const firebaseConfig = {
+apiKey: "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
+authDomain: "stiven-chat.firebaseapp.com",
+projectId: "stiven-chat",
+storageBucket: "stiven-chat.firebasestorage.app",
+messagingSenderId: "1049787541567",
+appId: "1:1049787541567:web:8a8769ea7a7355d7cc308a",
+measurementId: "G-M0TTJ9NV0R"
+};
+/* ══════════════════════════════════════════════ */
 
-    const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db   = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
+window.__FB = {
+auth, db,
+createUserWithEmailAndPassword, signInWithEmailAndPassword,
+updateProfile, onAuthStateChanged, signOut,
+collection, addDoc, onSnapshot, query, orderBy, where,
+serverTimestamp, doc, setDoc, updateDoc, getDoc
+};
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+
+<style>
+:root {
+--bg: #111b21;
+--surface: #202c33;
+--surface2: #2a3942;
+--border: #3b4a54;
+--accent: #00a884;
+--accent2: #008069;
+--glow: rgba(0,168,132,.18);
+--me: #005c4b;
+--out: #202c33;
+--text: #e9edef;
+--muted: #8696a0;
+--red: #f15c6d;
+--font: 'Cairo', sans-serif;
+--r: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
+body.auth-open { overflow-y: auto; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.hidden { display: none !important; }
+
+/* ── AUTH ───────────────────────────────── */
+#auth-screen {
+min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+padding: 20px 10px;
+overflow-y: auto;
+background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(0,168,132,.1), transparent 65%), var(--bg);
+}
+.card {
+width: 420px; background: var(--surface); border: 1px solid var(--border);
+border-radius: 22px; padding: 22px 28px;
+box-shadow: 0 24px 80px rgba(0,0,0,.55);
+animation: up .45s cubic-bezier(.16,1,.3,1);
+max-height: calc(100vh - 40px);
+overflow-y: auto; overflow-x: hidden;
+align-self: center;
+}
+@keyframes up { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
+
+.logo { text-align: center; margin-bottom: 14px; }
+.logo-icon {
+width: 50px; height: 50px; border-radius: 14px; margin: 0 auto 8px;
+background: linear-gradient(135deg, var(--accent), var(--accent2));
+display: flex; align-items: center; justify-content: center;
+font-size: 30px; box-shadow: 0 0 28px var(--glow);
+}
+.logo h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+.logo p { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+
+.tabs { display: flex; gap: 5px; background: var(--bg); border-radius: 11px; padding: 4px; margin-bottom: 14px; }
+.tab {
+flex: 1; padding: 7px; border: none; border-radius: 8px; cursor: pointer;
+font-family: var(--font); font-size: .88rem; font-weight: 600;
+background: transparent; color: var(--muted); transition: all .2s;
+}
+.tab.active { background: var(--surface2); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+
+.av-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.av-ring {
+width: 46px; height: 46px; border-radius: 50%;
+background: var(--surface2); border: 2px dashed var(--border);
+overflow: hidden; cursor: pointer; flex-shrink: 0;
+display: flex; align-items: center; justify-content: center; font-size: 18px;
+transition: border-color .2s;
+}
+.av-ring:hover { border-color: var(--accent); }
+.av-ring img { width: 100%; height: 100%; object-fit: cover; }
+.av-pick small { color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.av-pick small span { color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+.row2 { display: flex; gap: 10px; }
+.fg { margin-bottom: 9px; flex: 1; }
+.fg label { display: block; font-size: .68rem; color: var(--muted); margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.fg input {
+width: 100%; padding: 8px 11px; background: var(--bg);
+border: 1.5px solid var(--border); border-radius: 10px;
+color: var(--text); font-family: var(--font); font-size: .9rem; outline: none;
+transition: border-color .2s, box-shadow .2s;
+}
+.fg input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+.fg input::placeholder { color: var(--muted); }
+
+.btn {
+width: 100%; padding: 10px; margin-top: 4px;
+background: linear-gradient(135deg, var(--accent), var(--accent2));
+border: none; border-radius: 11px; color: #fff;
+font-family: var(--font); font-size: .98rem; font-weight: 700;
+cursor: pointer; transition: transform .15s, box-shadow .15s;
+box-shadow: 0 4px 18px var(--glow);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(0,168,132,.38); }
+.btn:active { transform: none; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+.err {
+background: rgba(241,92,109,.12); border: 1px solid rgba(241,92,109,.3);
+border-radius: 9px; padding: 7px 11px; font-size: .8rem;
+color: var(--red); margin-bottom: 8px; text-align: center;
+}
+
+/* ── CHAT ───────────────────────────────── */
+#chat-screen {
+height: 100vh; display: flex; flex-direction: column;
+max-width: 860px; margin: 0 auto; background: var(--bg);
+}
+
+/* Header */
+.hdr {
+display: flex; align-items: center; gap: 12px;
+padding: 12px 18px; background: var(--surface);
+border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.hav { width: 42px; height: 42px; border-radius: 50%; background: var(--surface2); overflow: hidden; position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.hav img { width: 100%; height: 100%; object-fit: cover; }
+.odot {
+position: absolute; bottom: 1px; right: 1px;
+width: 11px; height: 11px; border-radius: 50%;
+border: 2px solid var(--surface);
+background: #555; transition: background .4s;
+}
+.odot.on { background: var(--accent); box-shadow: 0 0 6px rgba(0,168,132,.7); }
+.hinfo h2 { font-size: .98rem; font-weight: 700; }
+.hst { font-size: .73rem; color: var(--muted); }
+.hst.on { color: var(--accent); }
+.hdr .spacer { flex: 1; }
+.iBtn {
+background: none; border: none; color: var(--muted); font-size: 1.05rem;
+cursor: pointer; padding: 7px; border-radius: 8px; transition: background .15s, color .15s;
+}
+.iBtn:hover { background: var(--border); color: var(--text); }
+
+/* Messages */
+.msgs {
+flex: 1; overflow-y: auto; padding: 16px 14px;
+display: flex; flex-direction: column; gap: 4px;
+position: relative; overflow-x: hidden;
+background: var(--bg);
+}
+
+/* ── Ambient blobs ── */
+.blob-wrap {
+position: absolute; inset: 0; pointer-events: none;
+overflow: hidden; z-index: 0;
+}
+.blob {
+position: absolute; border-radius: 50%;
+filter: blur(72px);
+opacity: 0;
+transition: background .8s ease;
+animation: blobFloat linear infinite;
+}
+.blob:nth-child(1) { width: 340px; height: 340px; animation-duration: 22s; animation-delay: 0s; top: 5%; left: -10%; }
+.blob:nth-child(2) { width: 280px; height: 280px; animation-duration: 28s; animation-delay: -8s; top: 40%; right: -8%; }
+.blob:nth-child(3) { width: 220px; height: 220px; animation-duration: 18s; animation-delay: -14s; top: 65%; left: 20%; }
+@keyframes blobFloat {
+0% { transform: translateY(0px) scale(1); opacity: var(--blob-op); }
+33% { transform: translateY(-28px) scale(1.06); opacity: var(--blob-op); }
+66% { transform: translateY(18px) scale(.95); opacity: var(--blob-op); }
+100% { transform: translateY(0px) scale(1); opacity: var(--blob-op); }
+}
+/* messages sit above blobs */
+.msgs > *:not(.blob-wrap) { position: relative; z-index: 1; }
+
+.day-sep { text-align: center; margin: 10px 0; }
+.day-sep span {
+background: var(--surface); border: 1px solid var(--border);
+border-radius: 20px; padding: 3px 13px;
+font-size: .7rem; color: var(--muted);
+}
+
+.brow {
+display: flex; align-items: flex-end; gap: 7px;
+max-width: 68%; animation: pop .2s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes pop { from { opacity:0; transform:scale(.88) translateY(6px) } to { opacity:1; transform:none } }
+.brow.me { align-self: flex-end; flex-direction: row-reverse; }
+.brow.other { align-self: flex-start; }
+
+.bav { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.bav img { width: 100%; height: 100%; object-fit: cover; }
+
+.bub {
+padding: 8px 12px 6px; border-radius: 12px;
+font-size: .88rem; line-height: 1.55; max-width: 100%; word-break: break-word;
+}
+.brow.me .bub { background: var(--me); border-bottom-left-radius: 3px; }
+.brow.other .bub { background: var(--out); border-bottom-right-radius: 3px; border: 1px solid var(--border); }
+.bub img { max-width: 260px; max-height: 300px; border-radius: 9px; display: block; margin-top: 4px; cursor: pointer; }
+
+.btime { font-size: .63rem; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+.brow.me .btime { text-align: right; }
+.brow.me .btime::after { content: ' ✓✓'; color: var(--accent); }
+
+/* Input bar */
+.bar {
+display: flex; align-items: center; gap: 8px;
+padding: 10px 14px; background: var(--surface);
+border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.img-btn {
+background: none; border: none; color: var(--muted); font-size: 1.25rem;
+cursor: pointer; padding: 6px; border-radius: 8px; transition: color .15s;
+flex-shrink: 0;
+}
+.img-btn:hover { color: var(--accent); }
+.tinput {
+flex: 1; padding: 10px 15px; background: var(--surface2);
+border: 1.5px solid var(--border); border-radius: 22px;
+color: var(--text); font-family: var(--font); font-size: .9rem;
+outline: none; resize: none; max-height: 110px; line-height: 1.4;
+transition: border-color .2s, box-shadow .2s;
+}
+.tinput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+.tinput::placeholder { color: var(--muted); }
+.sbtn {
+width: 44px; height: 44px; border-radius
     window.__FB = {
       auth, db,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,

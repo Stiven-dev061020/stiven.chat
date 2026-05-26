@@ -682,7 +682,6 @@
       
       arr.forEach(u => {
         const div = document.createElement('div');
-        // هنا تم التأكد من بقاء التحديد نشطاً حتى لو تم تحديث البيانات تلقائياً من الفايربيز
         div.className = 'user-item' + ((activeUser && activeUser.uid === u.uid) ? ' active' : '');
         div.onclick = () => selectUser(u);
 
@@ -708,7 +707,6 @@
     function selectUser(u) {
       activeUser = u;
       
-      // إعادة بناء عناصر القائمة لتطبيق الكلاس active فوراً على المستخدم المختار
       renderUsers(usersCache);
 
       document.getElementById('sidebar').classList.add('slide-out');
@@ -729,17 +727,29 @@
       loadMsgs();
     }
 
+    // ═══════════ الدالة المعدلة والمحاطة بالكامل لحماية الرسائل وتفادي التداخل ═══════════
     function loadMsgs() {
       if(unsubMsgs) unsubMsgs();
+      
       const wrap = document.getElementById('msgs');
       const bWrap = document.getElementById('blob-wrap');
       
+      // إفراغ الشاشة أولاً مع الاحتفاظ بالخلفية المتحركة لتفادي وميض الرسائل القديمة
       wrap.innerHTML = '';
       if(bWrap) wrap.appendChild(bWrap);
+
+      // إذا لم يكن هناك مستخدم نشط، لا تفعل شيئاً
+      if (!activeUser) return;
+
+      // تخزين الـ UID الحالي للمستخدم النشط محلياً داخل الدالة لمقارنته عند حدوث أي تحديث حي
+      const currentActiveUid = activeUser.uid;
 
       const q = FB.query(FB.collection(FB.db, "messages"), FB.orderBy("timestamp", "asc"));
       
       unsubMsgs = FB.onSnapshot(q, snap => {
+        // حماية إضافية: إذا قام المستخدم بالتبديل السريع لمستخدم آخر أثناء تحميل البيانات، يتم تجاهل التحديث الحالي فوراً لمنع التداخل
+        if (!activeUser || activeUser.uid !== currentActiveUid) return;
+
         wrap.innerHTML = '';
         if(bWrap) wrap.appendChild(bWrap);
         
@@ -747,8 +757,10 @@
 
         snap.forEach(d => {
           const m = d.data();
-          if ((m.senderId === ME.uid && m.receiverId === activeUser.uid) || 
-              (m.senderId === activeUser.uid && m.receiverId === ME.uid)) {
+          
+          // شرط إحاطة وتحقق صارم لضمان عرض الرسائل المتبادلة بين (أنا والمستخدم النشط الحالي فقط) لا غير
+          if ((m.senderId === ME.uid && m.receiverId === currentActiveUid) || 
+              (m.senderId === currentActiveUid && m.receiverId === ME.uid)) {
             
             hasMsgs = true;
             const isMe = m.senderId === ME.uid;

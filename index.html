@@ -282,7 +282,7 @@
 
     .user-item { display: flex; align-items: center; gap: 12px; padding: 14px; cursor: pointer; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; transition: all .25s cubic-bezier(.16,1,.3,1); }
     .user-item:hover { background: rgba(255, 255, 255, 0.07); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.12); }
-    .user-item.active  { background: var(--surface2); border-color: var(--live-accent, var(--accent)); box-shadow: 0 4px 15px var(--live-glow, var(--glow)); }
+    .user-item.active  { background: var(--surface2) !important; border-color: var(--live-accent, var(--accent)) !important; box-shadow: 0 4px 15px var(--live-glow, var(--glow)) !important; }
     .u-av { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.08); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
     .u-av img { width:100%; height:100%; object-fit:cover; }
     .u-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #0a101a; background: #64748b; }
@@ -574,7 +574,6 @@
     function applyLivePreviewColors(hex) {
       const card = document.getElementById('auth-card');
       const logoIcon = document.getElementById('main-logo-icon');
-      const activeText = document.querySelector('.welcome-text.active-text');
       
       let accent2 = "#0086ff";
       if (hex === "#ff4a6b" || hex === "#ec4899") accent2 = "#a855f7";
@@ -680,9 +679,11 @@
       const list = document.getElementById('sb-list');
       list.innerHTML = '';
       if(!arr.length) { list.innerHTML = '<div class="sb-empty">لا يوجد مستخدمون آخرون بعد</div>'; return; }
+      
       arr.forEach(u => {
         const div = document.createElement('div');
-        div.className = 'user-item' + ((activeUser && activeUser.uid===u.uid)?' active':'');
+        // هنا تم التأكد من بقاء التحديد نشطاً حتى لو تم تحديث البيانات تلقائياً من الفايربيز
+        div.className = 'user-item' + ((activeUser && activeUser.uid === u.uid) ? ' active' : '');
         div.onclick = () => selectUser(u);
 
         let avHtml = u.avatar ? `<img src="${u.avatar}"/>` : (u.gender==='female'?'👩':'🧑');
@@ -706,7 +707,10 @@
 
     function selectUser(u) {
       activeUser = u;
+      
+      // إعادة بناء عناصر القائمة لتطبيق الكلاس active فوراً على المستخدم المختار
       renderUsers(usersCache);
+
       document.getElementById('sidebar').classList.add('slide-out');
       document.getElementById('chat-welcome').classList.add('hidden');
       document.getElementById('chat-view').classList.remove('hidden');
@@ -728,16 +732,14 @@
     function loadMsgs() {
       if(unsubMsgs) unsubMsgs();
       const wrap = document.getElementById('msgs');
-      
-      // إزالة كل الرسائل القديمة مع الإبقاء على خلفية الـ blob النابضة
       const bWrap = document.getElementById('blob-wrap');
+      
       wrap.innerHTML = '';
       if(bWrap) wrap.appendChild(bWrap);
 
       const q = FB.query(FB.collection(FB.db, "messages"), FB.orderBy("timestamp", "asc"));
       
       unsubMsgs = FB.onSnapshot(q, snap => {
-        // تفريغ الرسائل مجدداً عند كل تحديث فوري
         wrap.innerHTML = '';
         if(bWrap) wrap.appendChild(bWrap);
         
@@ -745,7 +747,6 @@
 
         snap.forEach(d => {
           const m = d.data();
-          // فحص دقيق وشامل لضمان ظهور الرسائل المتبادلة بين الطرفين فقط بكل الاتجاهات
           if ((m.senderId === ME.uid && m.receiverId === activeUser.uid) || 
               (m.senderId === activeUser.uid && m.receiverId === ME.uid)) {
             
@@ -792,8 +793,7 @@
       const txt = inp.value.trim();
       if(!txt && !imgToSend) return;
 
-      const currentActiveUser = activeUser; 
-      if(!currentActiveUser) return;
+      if(!activeUser) return;
 
       inp.value = '';
       inp.style.height = 'auto';
@@ -804,7 +804,7 @@
       try {
         await FB.addDoc(FB.collection(FB.db, "messages"), {
           senderId: ME.uid,
-          receiverId: currentActiveUser.uid,
+          receiverId: activeUser.uid,
           text: txt,
           img: copyImg || "",
           timestamp: FB.serverTimestamp()

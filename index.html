@@ -19,466 +19,877 @@
       apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
       authDomain:        "stiven-chat.firebaseapp.com",
       projectId:         "stiven-chat",
-      storageBucket:     "stiven-chat.appspot.com",
-      messagingSenderId: "109315510488",
-      appId:             "1:109315510488:web:96e838634e56598375836d"
+      storageBucket:     "stiven-chat.firebasestorage.app",
+      messagingSenderId: "1049787541567",
+      appId:             "1:1049787541567:web:8a8769ea7a7355d7cc308a",
+      measurementId:     "G-M0TTJ9NV0R"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    let me = null;
-    let usersData = {};
-    let targetUid = null;
-    let unsubMsgs = null;
-    let imgToSend = null;
+    window.__FB = {
+      auth, db,
+      createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      updateProfile, onAuthStateChanged, signOut,
+      collection, addDoc, onSnapshot, query, orderBy,
+      serverTimestamp, doc, setDoc, updateDoc, getDoc
+    };
 
-    window.addEventListener("DOMContentLoaded", () => {
-      onAuthStateChanged(auth, async (u) => {
-        if(u) {
-          me = u;
-          showEl("app", true); showEl("auth-modal", false);
-          await setDoc(doc(db, "users", me.uid), {
-            uid: me.uid,
-            name: me.displayName || "مستخدم ستيفن",
-            email: me.email,
-            gender: me.metadata.creationTime === me.metadata.lastSignInTime ? "male" : (window.selectedGender || "male"),
-            lastSeen: serverTimestamp()
-          }, { merge: true });
-          listenUsers();
-        } else {
-          me = null; targetUid = null;
-          showEl("app", false); showEl("auth-modal", true);
-          if(unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
-        }
-      });
-
-      document.getElementById("login-tab").onclick = () => switchAuthTab(true);
-      document.getElementById("register-tab").onclick = () => switchAuthTab(false);
-      
-      document.getElementById("g-m").onclick = () => setGenderChoice("male");
-      document.getElementById("g-f").onclick = () => setGenderChoice("female");
-
-      document.getElementById("l-btn").onclick = login;
-      document.getElementById("r-btn").onclick = register;
-      document.getElementById("logout-btn").onclick = () => signOut(auth);
-
-      document.getElementById("send-btn").onclick = sendMsg;
-      document.getElementById("msg-input").onkeydown = (e) => { if(e.key==="Enter") sendMsg(); };
-
-      document.getElementById("clip-btn").onclick = () => document.getElementById("f-file").click();
-      document.getElementById("f-file").onchange = handleFile;
-      document.getElementById("cancel-img").onclick = cancelImg;
-      
-      // زر العودة للخلف في الهواتف
-      document.getElementById("back-btn").onclick = () => {
-         document.getElementById("app").classList.remove("chat-active");
-      };
-    });
-
-    function showEl(id, sh) { document.getElementById(id).style.display = sh ? "flex" : "none"; }
-    
-    function switchAuthTab(isLogin) {
-      const lTab = document.getElementById("login-tab"), rTab = document.getElementById("register-tab");
-      const lForm = document.getElementById("l-form"), rForm = document.getElementById("r-form");
-      if(isLogin) {
-        lTab.classList.add("active"); rTab.classList.remove("active");
-        lForm.classList.remove("hidden"); rForm.classList.add("hidden");
-      } else {
-        rTab.classList.add("active"); lTab.classList.remove("active");
-        lForm.classList.add("hidden"); rForm.classList.remove("hidden");
-      }
-    }
-
-    function setGenderChoice(g) {
-      window.selectedGender = g;
-      if(g==="male") {
-        document.getElementById("g-m").classList.add("sel");
-        document.getElementById("g-f").classList.remove("sel");
-      } else {
-        document.getElementById("g-f").classList.add("sel");
-        document.getElementById("g-m").classList.remove("sel");
-      }
-    }
-
-    async function login() {
-      const e = document.getElementById("l-email").value.trim(), p = document.getElementById("l-pass").value;
-      if(!e || !p) return alert("امْلأْ الحقول");
-      btnLoad("l-btn", true);
-      try { await signInWithEmailAndPassword(auth, e, p); }
-      catch(err) { alert("خطأ بالدخول: " + err.message); }
-      btnLoad("l-btn", false);
-    }
-
-    async function register() {
-      const n = document.getElementById("r-name").value.trim(), e = document.getElementById("r-email").value.trim(), p = document.getElementById("r-pass").value;
-      if(!n || !e || !p) return alert("امْلأْ جَمِيع الحقول");
-      const g = window.selectedGender || "male";
-      btnLoad("r-btn", true);
-      try {
-        const res = await createUserWithEmailAndPassword(auth, e, p);
-        await updateProfile(res.user, { displayName: n });
-        await setDoc(doc(db, "users", res.user.uid), { uid: res.user.uid, name: n, email: e, gender: g, lastSeen: serverTimestamp() });
-      } catch(err) { alert("خطأ بالتسجيل: " + err.message); }
-      btnLoad("r-btn", false);
-    }
-
-    function listenUsers() {
-      onSnapshot(collection(db, "users"), (snap) => {
-        const list = document.getElementById("u-list");
-        list.innerHTML = "";
-        let count = 0;
-        snap.forEach((d) => {
-          const u = d.data();
-          usersData[u.uid] = u;
-          if(u.uid !== me.uid) {
-            count++;
-            const item = document.createElement("div");
-            item.className = "u-item" + (targetUid === u.uid ? " active" : "");
-            item.setAttribute("data-uid", u.uid);
-            
-            const clr = u.gender === "female" ? "#ff4fac" : "#00f2fe";
-            const shadow = u.gender === "female" ? "rgba(255,79,172,0.15)" : "rgba(0,242,254,0.15)";
-            item.style.setProperty("--u-clr", clr);
-            item.style.setProperty("--u-shd", shadow);
-
-            item.innerHTML = `
-              <div class="u-avatar">
-                <span>${u.name[0].toUpperCase()}</span>
-                <div class="u-status-dot online"></div>
-              </div>
-              <div class="u-txt">
-                <h4>${u.name}</h4>
-                <p>اضغط لبدء محادثة آمنة...</p>
-              </div>
-            `;
-            list.appendChild(item);
-          }
-        });
-        if(count===0) list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">لا يوجد مستخدمون آخرون بعد</div>';
-        
-        setupUsersClick();
-        if(me) {
-          const myData = usersData[me.uid];
-          const myClr = myData?.gender === "female" ? "#ff4fac" : "#00f2fe";
-          document.getElementById("me-name").innerText = myData?.name || me.displayName || "أنا";
-          document.getElementById("me-name").style.color = myClr;
-          document.getElementById("my-av").style.borderColor = myClr;
-          document.getElementById("my-av").innerHTML = `<span>${(myData?.name || "أ")[0].toUpperCase()}</span>`;
-        }
-      });
-    }
-
-    // 🛠️ الإصلاح الجوهري هنا: لقراءة الـ UID المختار بشكل دقيق وتفعيل الشاشة المتجاوبة
-    function setupUsersClick() {
-      document.querySelectorAll(".u-item").forEach(el => {
-        el.onclick = () => {
-          document.querySelectorAll(".u-item").forEach(x => x.classList.remove("active"));
-          el.classList.add("active");
-          
-          // قراءة الـ UID مباشرة من الـ attribute الخاص بالعنصر نفسه
-          const uid = el.getAttribute("data-uid");
-          targetUid = uid;
-          
-          // تفعيل كلاس الواجهة المتجاوبة في الهاتف لفتح الشاشة
-          document.getElementById("app").classList.add("chat-active");
-
-          const tUser = usersData[targetUid];
-          const c = tUser?.gender === "female" ? "#ff4fac" : "#00f2fe";
-          
-          document.getElementById("chat-title").innerText = tUser ? tUser.name : "محادثة";
-          document.getElementById("chat-title").style.color = c;
-          document.getElementById("target-av").style.borderColor = c;
-          document.getElementById("target-av").innerHTML = `<span>${(tUser?.name || "س")[0].toUpperCase()}</span>`;
-          
-          document.getElementById("no-chat").classList.add("hidden");
-          document.getElementById("chat-main").classList.remove("hidden");
-          
-          listenMsgs();
-        };
-      });
-    }
-
-    function listenMsgs() {
-      if(unsubMsgs) unsubMsgs();
-      const cId = me.uid < targetUid ? `${me.uid}_${targetUid}` : `${targetUid}_${me.uid}`;
-      const q = query(collection(db, "chats", cId, "messages"), orderBy("time", "asc"));
-      
-      unsubMsgs = onSnapshot(q, (snap) => {
-        const wrap = document.getElementById("msgs");
-        wrap.innerHTML = "";
-        if(snap.empty) { renderEmptyState(); return; }
-        snap.forEach((d) => {
-          const m = d.data();
-          const side = m.sender === me.uid ? "me" : "him";
-          const div = document.createElement("div");
-          div.className = `msg ${side}`;
-          
-          let content = "";
-          if(m.img) content += `<img src="${m.img}" class="msg-img" onclick="zoomImg('${m.img}')" />`;
-          if(m.text) content += `<p class="msg-p">${m.text}</p>`;
-          
-          div.innerHTML = content;
-          wrap.appendChild(div);
-        });
-        wrap.scrollTop = wrap.scrollHeight;
-      });
-    }
-
-    async function sendMsg() {
-      const inp = document.getElementById("msg-input");
-      const txt = inp.value.trim();
-      if(!txt && !imgToSend) return;
-      if(!targetUid) return;
-
-      const cId = me.uid < targetUid ? `${me.uid}_${targetUid}` : `${targetUid}_${me.uid}`;
-      const mData = { sender: me.uid, time: serverTimestamp() };
-      if(txt) mData.text = txt;
-      if(imgToSend) mData.img = imgToSend;
-
-      inp.value = ""; cancelImg();
-      try { await addDoc(collection(db, "chats", cId, "messages"), mData); }
-      catch(e) { console.error(e); }
-    }
-
-    function handleFile(e) {
-      const f = e.target.files[0]; if(!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        imgToSend = r.result;
-        document.getElementById("img-preview-thumb").src = imgToSend;
-        document.getElementById("img-preview-bar").classList.remove("hidden");
-      };
-      r.readAsDataURL(f); e.target.value = "";
-    }
-
-    function cancelImg() { imgToSend = null; document.getElementById("img-preview-bar").classList.add("hidden"); }
-    function zoomImg(src) { const box = document.createElement("div"); box.className = "lbox"; box.innerHTML = `<img src="${src}"/>`;
-      box.onclick = () => box.remove(); document.body.appendChild(box); }
-    function renderEmptyState() { const wrap = document.getElementById("msgs");
-      const empty = document.createElement("div"); empty.className = "empty"; empty.innerHTML = '<div class="em" style="text-align:center;font-size:2rem;margin-top:40px;">💌</div><h3 style="text-align:center;color:var(--muted);margin-top:10px;">لا رسائل بعد</h3>'; wrap.appendChild(empty); }
-    function btnLoad(id, on) { const b = document.getElementById(id); b.disabled = on; b.innerHTML = on ?
-      '<span class="spin"></span>' : (id==="r-btn"?"إنشاء الحساب":"دخول"); }
+    window.dispatchEvent(new Event("fb-ready"));
   </script>
 
   <style>
     :root {
-      --bg: #060b13;
-      --panel: #0b1320;
-      --card: #111b2d;
-      --border: rgba(0, 242, 254, 0.12);
-      --text: #f0f5fa;
-      --muted: #62778f;
-      --cyan: #00f2fe;
-      --pink: #4facfe;
+      --bg:        #06090e;
+      --surface:   rgba(10, 16, 26, 0.65); 
+      --surface2:  rgba(20, 32, 50, 0.5);
+      --border:    rgba(255, 255, 255, 0.06);
+      --accent:    #00e5ff; 
+      --accent2:   #0086ff;
+      --glow:      rgba(0, 229, 255, 0.25);
+      --me:        rgba(0, 134, 255, 0.45);
+      --out:       rgba(255, 255, 255, 0.04);
+      --text:      #f1f5f9;
+      --muted:     #64748b;
+      --red:       #ff4a6b;
+      --font:      'Cairo', sans-serif;
+      --glass:     blur(20px);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; transition: background 0.2s, border-color 0.2s; }
-    body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
     
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 15% 15%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.05) 0%, transparent 55%);
+      z-index: -2;
+    }
+    body.auth-open { overflow-y: auto; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 4px; }
     .hidden { display: none !important; }
 
-    /* AUTH MODAL */
-    .auth-overlay { position: fixed; inset: 0; background: rgba(4,7,13,0.9); display: flex; justify-content: center; align-items: center; z-index: 999; padding: 20px; }
-    .auth-card { background: var(--panel); width: 100%; max-width: 420px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
-    .auth-tabs { display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-    .auth-tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; color: var(--muted); font-weight: 600; }
-    .auth-tab.active { color: var(--cyan); background: rgba(0,242,254,0.04); border-bottom: 2px solid var(--cyan); }
-    .auth-body { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-    .g-field { display: flex; flex-direction: column; gap: 8px; }
-    .g-field label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
-    .g-field input { background: var(--card); border: 1px solid var(--border); padding: 12px 15px; border-radius: 10px; color: #fff; outline: none; font-size: 0.95rem; }
-    .g-field input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,242,254,0.1); }
-    
-    .gender-selector { display: flex; gap: 15px; margin-top: 5px; }
-    .gender-box { flex: 1; border: 1px solid var(--border); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; background: var(--card); font-weight: 600; font-size: 0.9rem; color: var(--muted); }
-    .gender-box.m.sel { border-color: var(--cyan); color: var(--cyan); background: rgba(0,242,254,0.05); }
-    .gender-box.f.sel { border-color: #ff4fac; color: #ff4fac; background: rgba(255,79,172,0.05); }
-    
-    .primary-btn { background: linear-gradient(135deg, var(--cyan), var(--pink)); color: #04070d; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 10px; display: flex; justify-content: center; align-items: center; min-height: 50px; }
-    .primary-btn:hover { opacity: 0.95; transform: translateY(-1px); }
-    .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    /* ═══════════ AUTH ═══════════════════════════ */
+    #auth-screen {
+      min-height: 100vh;
+      display: flex; align-items: flex-start;
+      justify-content: center; padding: 20px 10px; overflow-y: auto;
+      background: transparent;
+    }
+    .card {
+      width: 420px; 
+      background: var(--surface); 
+      border: 1px solid var(--live-accent, var(--accent));
+      backdrop-filter: var(--glass);
+      -webkit-backdrop-filter: var(--glass);
+      border-radius: 24px; padding: 24px 28px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.75), 0 0 40px var(--live-glow, var(--glow));
+      animation: slideUp .55s cubic-bezier(.16,1,.3,1);
+      max-height: calc(100vh - 40px); overflow-y: auto;
+      overflow-x: hidden;
+      align-self: center;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    @keyframes slideUp { from { opacity:0; transform:translateY(30px) } to { opacity:1; transform:none } }
 
-    /* MAIN APP AREA */
-    .app-w { display: flex; width: 100vw; height: 100vh; background: var(--bg); position: relative; }
+    .logo { text-align: center; margin-bottom: 18px; }
+    .logo-icon {
+      width: 55px; height: 55px; border-radius: 16px;
+      margin: 0 auto 12px;
+      background: linear-gradient(135deg, var(--live-accent, var(--accent)), var(--live-accent2, var(--accent2)));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 0 28px var(--live-glow, var(--glow));
+      transition: background 0.4s ease, box-shadow 0.4s ease;
+    }
+    .logo h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
     
-    /* SIDEBAR */
-    .side { width: 360px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; shrink: 0; }
-    .side-h { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.1); }
-    .my-profile { display: flex; align-items: center; gap: 12px; }
-    .my-av, .target-av { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--cyan); display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); font-weight: 700; color: #fff; font-size: 1.1rem; }
-    .me-info h3 { font-size: 0.95rem; font-weight: 600; }
-    .me-info p { font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 4px; }
-    .me-info p::before { content:''; width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block; }
-    .ico-btn { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 5px; }
-    .ico-btn:hover { color: var(--cyan); }
-    
-    .u-list { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 8px; }
-    .u-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; background: rgba(255,255,255,0.01); }
-    .u-item:hover, .u-item.active { background: var(--u-shd, rgba(0,242,254,0.04)); border-color: var(--u-clr, var(--border)); }
-    .u-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,0.2); border: 2px solid var(--u-clr, var(--cyan)); display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 1rem; position: relative; color: #fff; }
-    .u-status-dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; bottom: -1px; left: -1px; border: 2px solid var(--panel); }
-    .u-status-dot.online { background: #10b981; }
-    .u-txt h4 { font-size: 0.9rem; font-weight: 600; color: var(--text); }
-    .u-txt p { font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .welcome-container {
+      height: 22px;
+      margin-top: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .welcome-text {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 1px;
+      display: block;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(15px);
+      position: absolute;
+      width: 100%;
+      left: 0;
+      transition: all 0.4s cubic-bezier(.16,1,.3,1);
+    }
+    .welcome-text.active-text {
+      opacity: 1;
+      transform: translateY(0);
+      color: var(--live-accent, var(--accent));
+      text-shadow: 0 0 10px var(--live-glow, var(--glow));
+    }
+    .welcome-text.exit-text {
+      opacity: 0;
+      transform: translateY(-15px);
+    }
 
-    /* CHAT WINDOW */
-    .c-window { flex: 1; display: flex; flex-direction: column; background: var(--bg); z-index: 5; position: relative; }
-    .no-chat-screen { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; color: var(--muted); background: var(--bg); }
-    .no-chat-screen .logo-art { font-size: 3.5rem; background: linear-gradient(135deg, var(--cyan), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 15px rgba(0,242,254,0.2)); }
-    
-    .c-header { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--panel); }
-    .c-user-meta { display: flex; align-items: center; gap: 12px; }
-    .c-info h3 { font-size: 1rem; font-weight: 600; }
-    .c-info p { font-size: 0.75rem; color: var(--muted); }
-    
-    .msgs-wrap { flex: 1; overflow-y: auto; padding: 25px 20px; display: flex; flex-direction: column; gap: 15px; background: radial-gradient(circle at top left, rgba(0,242,254,0.02), transparent 40%); }
-    
-    .msg { display: flex; flex-direction: column; max-width: 65%; animation: msgIn 0.25s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
-    .msg.me { align-self: flex-start; }
-    .msg.him { align-self: flex-end; }
-    
-    .msg-p { padding: 12px 16px; border-radius: 16px; font-size: 0.95rem; line-height: 1.45; word-break: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .msg.me .msg-p { background: linear-gradient(135deg, var(--cyan), var(--pink)); color: #04070d; border-bottom-right-radius: 4px; font-weight: 500; }
-    .msg.him .msg-p { background: var(--card); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-    
-    .msg-img { max-width: 240px; max-height: 240px; border-radius: 12px; cursor: pointer; object-fit: cover; border: 1px solid var(--border); margin-bottom: 4px; }
-    .msg-img:hover { filter: brightness(1.1); }
+    .tabs { display: flex; gap: 5px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+    .tab  {
+      flex: 1; padding: 8px;
+      border: none; border-radius: 9px;
+      cursor: pointer;
+      font-family: var(--font); font-size: .88rem; font-weight: 600;
+      background: transparent; color: var(--muted); transition: all .25s ease;
+    }
+    .tab.active { background: var(--surface2); color: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.4); backdrop-filter: var(--glass); }
 
-    /* BAR FOR IMAGES PREVIEW */
-    .img-p-bar { padding: 10px 20px; background: var(--panel); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .p-thumb-w { display: flex; align-items: center; gap: 12px; }
-    .p-thumb-w img { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; border: 1px solid var(--cyan); }
-    .p-thumb-w span { font-size: 0.8rem; color: var(--muted); }
+    .av-pick { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .av-ring {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+      border: 2px dashed rgba(255,255,255,0.15);
+      overflow: hidden; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      transition: all .25s ease;
+    }
+    .av-ring:hover { border-color: var(--live-accent, var(--accent)); background: rgba(255,255,255,0.06); }
+    .av-ring img   { width: 100%; height: 100%; object-fit: cover; }
+    .av-pick small { color: var(--muted); font-size: .78rem; line-height: 1.5; }
+    .av-pick small span { color: var(--live-accent, var(--accent)); text-decoration: underline; cursor: pointer; }
 
-    /* INPUT FIELD AREA */
-    .c-bar { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); }
-    .c-bar-inner { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); padding: 6px 14px; border-radius: 14px; }
-    .c-bar-inner input { flex: 1; background: none; border: none; color: #fff; outline: none; padding: 10px 5px; font-size: 0.95rem; }
+    .row2 { display: flex; gap: 10px; }
+    .fg   { margin-bottom: 10px; flex: 1; }
+    .fg label { display: block; font-size: .68rem; color: var(--muted); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .fg input {
+      width: 100%;
+      padding: 9px 12px; background: rgba(0, 0, 0, 0.3);
+      border: 1.5px solid var(--border); border-radius: 12px;
+      color: var(--text); font-family: var(--font); font-size: .9rem;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .fg input:focus { border-color: var(--live-accent, var(--accent)); box-shadow: 0 0 0 3px var(--live-glow, var(--glow)); }
+    .fg input::placeholder { color: rgba(255, 255, 255, 0.15); }
+
+    .btn {
+      width: 100%;
+      padding: 11px; margin-top: 6px;
+      background: linear-gradient(135deg, var(--live-accent, var(--accent)), var(--live-accent2, var(--accent2)));
+      border: none; border-radius: 12px; color: #fff;
+      font-family: var(--font); font-size: .98rem; font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 18px var(--live-glow, var(--glow));
+    }
+    .btn:hover  { transform: translateY(-1.5px); box-shadow: 0 6px 22px var(--live-glow, var(--glow)); }
+    .btn:active { transform: none; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .err {
+      background: rgba(255,74,107,.12); border: 1px solid rgba(255,74,107,.3);
+      border-radius: 10px; padding: 8px 12px; font-size: .8rem;
+      color: var(--red); margin-bottom: 10px; text-align: center;
+    }
+
+    .gender-group { margin-bottom: 10px; }
+    .gender-group label.group-label {
+      display: block; font-size: .68rem; color: var(--muted);
+      margin-bottom: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .gender-options { display: flex; gap: 10px; }
+    .gender-options input[type="radio"] { display: none; }
+    .gender-options label {
+      flex: 1;
+      padding: 8px 0; border-radius: 12px; cursor: pointer;
+      text-align: center; font-size: .88rem; font-weight: 600;
+      border: 1.5px solid var(--border); color: var(--muted);
+      background: rgba(0, 0, 0, 0.2); transition: all .22s; user-select: none;
+    }
+    .gender-options input[type="radio"]:checked + label {
+      border-color: var(--live-accent, var(--accent));
+      color: var(--live-accent, var(--accent));
+      background: var(--live-glow, var(--glow));
+      box-shadow: 0 0 0 2px var(--live-glow, var(--glow));
+    }
+
+    #color-picker-container {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 10px; padding: 10px 12px;
+      background: rgba(0,0,0,0.3); border: 1.5px solid var(--border);
+      border-radius: 14px;
+      animation: slideUp .3s cubic-bezier(.16,1,.3,1);
+    }
+    .color-circle {
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+      border: 2.5px solid transparent; flex-shrink: 0;
+      position: relative; overflow: visible;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+      animation: breathe 3.2s ease-in-out infinite;
+      transition: transform .18s, box-shadow .18s, border-color .18s;
+    }
+    @keyframes breathe { 0%,100% { transform:scale(1); opacity:.85; } 50% { transform:scale(1.08); opacity:1; } }
+    .color-circle:hover { transform:scale(1.2) !important; animation-play-state:paused; }
+    .color-circle.selected::after {
+      content:'✓'; opacity:1; display:flex; align-items:center; justify-content:center;
+      line-height:26px; text-align:center;
+      text-shadow:0 1px 4px rgba(0,0,0,.6); color:#fff; font-weight:900;
+    }
+    .color-circle.selected {
+      border-color:rgba(255,255,255,.9); transform:scale(1.2) !important;
+      animation:selectedPulse 2s ease-in-out infinite !important;
+    }
+    @keyframes selectedPulse {
+      0%,100% { box-shadow:0 0 0 3px rgba(255,255,255,.2),0 0 14px 4px var(--sel-glow,rgba(255,255,255,.3)); transform:scale(1.2); }
+      50%      { box-shadow:0 0 0 5px rgba(255,255,255,.1),0 0 22px 8px var(--sel-glow,rgba(255,255,255,.2)); transform:scale(1.24); }
+    }
+
+    @media (max-width:520px) { .card { width:95vw; padding:18px 14px; } }
+
+    /* ═══════════ APP SHELL ═════════════════ */
+    #app-shell {
+      height: 100vh;
+      display: flex; overflow: hidden;
+      max-width: 1140px; margin: 0 auto; background: transparent;
+      padding: 14px; gap: 14px;
+    }
+
+    #sidebar {
+      width: 340px;
+      min-width: 290px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: var(--surface); 
+      border: 1px solid var(--live-accent, var(--accent));
+      backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 20px var(--live-glow, var(--glow));
+      overflow: hidden; animation: slideUp .6s cubic-bezier(.16,1,.3,1);
+    }
+    .sb-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+    .sb-my-av { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(255,255,255,0.1); }
+    .sb-my-av img { width:100%; height:100%; object-fit:cover; }
+    .sb-my-name { font-size: .95rem; font-weight: 700; flex: 1; }
+    .sb-my-name small { display:block; font-size:.72rem; color:var(--muted); font-weight:400; }
+    .sb-search { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .sb-search input { width: 100%; padding: 9px 16px; background: rgba(0,0,0,0.25); border: 1.5px solid var(--border); border-radius: 14px; color: var(--text); font-family: var(--font); font-size: .85rem; outline: none; }
+    .sb-search input:focus { border-color: var(--live-accent, var(--accent)); }
+    .sb-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    .user-item { display: flex; align-items: center; gap: 12px; padding: 14px; cursor: pointer; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; transition: all .25s cubic-bezier(.16,1,.3,1); }
+    .user-item:hover { background: rgba(255, 255, 255, 0.07); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.12); }
+    .user-item.active  { background: var(--surface2); border-color: var(--live-accent, var(--accent)); box-shadow: 0 4px 15px var(--live-glow, var(--glow)); }
+    .u-av { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.08); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
+    .u-av img { width:100%; height:100%; object-fit:cover; }
+    .u-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #0a101a; background: #64748b; }
+    .u-dot.on { background: var(--live-accent, var(--accent)); box-shadow: 0 0 8px var(--live-accent, var(--accent)); }
+    .u-info { flex: 1; min-width: 0; }
+    .u-info h3 { font-size: .92rem; font-weight: 600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .u-info p  { font-size: .75rem; color: var(--muted); margin-top: 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .u-info p.on { color: var(--live-accent, var(--accent)); font-weight: 500; }
+    .sb-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); text-align: center; font-size: .85rem; }
+
+    #chat-panel {
+      flex: 1;
+      display: flex; flex-direction: column; overflow: hidden;
+      background: var(--surface); border: 1px solid var(--live-accent, var(--accent));
+      backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass); border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 20px var(--live-glow, var(--glow));
+      animation: slideUp .65s cubic-bezier(.16,1,.3,1);
+    }
+    #chat-welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); text-align: center; padding: 40px; }
+    #chat-welcome .wico { font-size: 4rem; animation: breathe 4s ease-in-out infinite; }
+    #chat-welcome h2 { color: var(--text); font-size: 1.35rem; font-weight: 700; }
     
-    .back-btn { display: none; background: none; border: none; color: var(--cyan); font-size: 1.3rem; cursor: pointer; padding: 5px; margin-left: 10px; }
+    .hdr { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+    .back-btn { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; display: none; }
+    .hav { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.08); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .hav img { width:100%; height:100%; object-fit:cover; }
+    .odot { position:absolute; bottom:1px; right:1px; width:11px; height:11px; border-radius:50%; border:2px solid #0a101a; background:#64748b; }
+    .odot.on { background:var(--live-accent, var(--accent)); box-shadow:0 0 8px var(--live-accent, var(--accent)); }
+    .hinfo h2 { font-size:.98rem; font-weight:700; }
+    .hst { font-size:.73rem; color:var(--muted); }
+    .hst.on { color:var(--live-accent, var(--accent)); font-weight: 500; }
+    .hdr .spacer { flex:1; }
+    .iBtn { background:none; border:none; color:var(--muted); font-size:1.05rem; cursor:pointer; padding:8px; border-radius:10px; }
+    .iBtn:hover { background:rgba(255,255,255,0.06); color:var(--text); }
 
-    /* UTILS */
-    .spin { width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: currentColor; border-radius: 50%; animation: rot 0.6s linear infinite; }
-    @keyframes rot { to { transform: rotate(360deg); } }
-    @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .msgs { flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow-x: hidden; }
+    
+    .blob-wrap { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(95px); opacity: 0; animation: blobFloat linear infinite; --blob-op: 0.06; }
+    .blob:nth-child(1) { width:350px; height:350px; animation-duration:24s; top:-5%; left:-15%; background: var(--live-accent, var(--accent)); }
+    .blob:nth-child(2) { width:300px; height:300px; animation-duration:30s; top:35%; right:-12%; background: var(--live-accent2, var(--accent2)); }
+    @keyframes blobFloat { 0%, 100% { transform:translateY(0) scale(1); opacity:var(--blob-op); } 50% { transform:translateY(-15px) scale(.95); opacity:var(--blob-op); } }
+    .msgs > *:not(.blob-wrap) { position:relative; z-index:1; }
 
-    .lbox { position: fixed; inset:0; background:rgba(4,7,13,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; padding:20px; cursor:zoom-out; }
-    .lbox img { max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 0 30px rgba(0,0,0,0.5); }
+    .day-sep { text-align:center; margin:12px 0; }
+    .day-sep span { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 14px; font-size: .7rem; color: var(--muted); backdrop-filter: var(--glass); }
+    
+    .brow { display:flex; align-items:flex-end; gap:8px; max-width:75%; animation:smoothPopIn .28s cubic-bezier(.175,.885,.32,1.15) both; }
+    @keyframes smoothPopIn { from{opacity:0;transform:scale(.92) translateY(8px)} to{opacity:1;transform:none} }
+    .brow.me { align-self:flex-end; flex-direction:row-reverse; }
+    .brow.other { align-self:flex-start; }
+    
+    .bav { width:28px; height:28px; border-radius:50%; overflow:hidden; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; }
+    .bav img { width:100%; height:100%; object-fit:cover; }
+    
+    .bub { padding:10px 15px 8px; border-radius:18px; font-size:.92rem; line-height:1.55; max-width:100%; word-break:break-word; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .brow.me .bub { background: var(--live-me, var(--me)); border-bottom-left-radius:4px; color: #fff; border: 1px solid rgba(255,255,255,0.08); }
+    .brow.other .bub { background: var(--out); border-bottom-right-radius:4px; border:1px solid var(--border); backdrop-filter: var(--glass); }
+    .bub img { max-width:260px; max-height:300px; border-radius:10px; display:block; margin-top:6px; }
+    
+    .btime { font-size:.65rem; color:var(--muted); margin-top:4px; }
+    .brow.me .btime::after { content:' ✓✓'; color: var(--live-accent, var(--accent)); }
 
-    /* 📱 تحسين شاشات الهواتف والتجاوب التام */
-    @media (max-width: 768px) {
-      .side { width: 100%; position: absolute; left: 0; top: 0; height: 100%; }
-      .c-window { width: 100%; position: absolute; left: 0; top: 0; height: 100%; display: none; }
-      .back-btn { display: block; }
-      
-      /* عندما يتم اختيار محادثة، يختفي العمود الجانبي وتظهر واجهة الدردشة */
-      .app-w.chat-active .c-window { display: flex; }
-      .app-w.chat-active .side { display: none; }
+    .bar { display:flex; align-items:center; gap:8px; padding:12px 16px; background: rgba(255,255,255,0.01); border-top:1px solid var(--border); }
+    .img-btn { background:none; border:none; color:var(--muted); font-size:1.3rem; cursor:pointer; padding:6px; border-radius:10px; }
+    .img-btn:hover { color:var(--live-accent, var(--accent)); background: rgba(255,255,255,0.05); }
+    .tinput { flex:1; padding:11px 16px; background: rgba(0,0,0,0.3); border:1.5px solid var(--border); border-radius:20px; color:var(--text); font-family:var(--font); font-size:.9rem; outline:none; resize:none; max-height:110px; }
+    .tinput:focus { border-color: var(--live-accent, var(--accent)); box-shadow:0 0 0 3px var(--live-glow, var(--glow)); }
+    .sbtn { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, var(--live-accent, var(--accent)), var(--live-accent2, var(--accent2))); border:none; color:#fff; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px var(--live-glow, var(--glow)); }
+
+    .img-preview-bar { display:flex; align-items:center; gap:12px; padding:10px 16px; background: var(--surface2); border-top:1px solid var(--border); }
+    .img-preview-bar img { height:60px; border-radius:8px; object-fit:cover; }
+    .img-preview-bar .cancel { background:none; border:none; color:var(--red); font-size:1.2rem; cursor:pointer; margin-right:auto; }
+
+    .lbox { position:fixed; inset:0; background:rgba(0,0,0,0.94); display:flex; align-items:center; justify-content:center; z-index:999; cursor:zoom-out; backdrop-filter: blur(12px); }
+    .lbox img { max-width:90vw; max-height:90vh; border-radius:12px; }
+    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(16px); background: rgba(10, 16, 26, 0.9); border: 1px solid var(--live-accent, var(--accent)); border-radius: 12px; padding:10px 20px; font-size:.85rem; opacity:0; pointer-events:none; transition:all .28s ease; z-index:999; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .spin { width:18px; height:18px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; display:inline-block; }
+    @keyframes sp { to { transform:rotate(360deg) } }
+    #footer-credit { position:fixed; bottom:8px; left:50%; transform:translateX(-50%); font-size:.65rem; color:rgba(255,255,255,0.12); pointer-events:none; user-select:none; z-index: 1; }
+
+    @media (max-width:680px) {
+      #app-shell { padding: 0; gap: 0; border-radius: 0; border: none; }
+      #sidebar { width:100%; position:absolute; inset:0; z-index:10; border-radius:0; border:none; transition:transform .3s ease; }
+      #sidebar.slide-out { transform:translateX(100%); }
+      #chat-panel { width:100%; border-radius:0; border:none; }
+      .back-btn { display:block !important; }
     }
   </style>
 </head>
-<body>
+<body class="auth-open">
 
-  <div class="auth-overlay" id="auth-modal" style="display: none;">
-    <div class="auth-card">
-      <div class="auth-tabs">
-        <div class="auth-tab active" id="login-tab">دخول التأسيس</div>
-        <div class="auth-tab" id="register-tab">إنشاء حساب ستيفن</div>
-      </div>
-      <div class="auth-body">
-        <div id="l-form">
-          <div class="g-field" style="margin-bottom:15px;">
-            <label>البريد الإلكتروني</label>
-            <input type="email" id="l-email" placeholder="name@domain.com" />
-          </div>
-          <div class="g-field">
-            <label>كلمة المرور</label>
-            <input type="password" id="l-pass" placeholder="••••••••" />
-          </div>
-          <button class="primary-btn" id="l-btn" style="width:100%;">دخول</button>
+  <div id="auth-screen">
+    <div class="card" id="auth-card">
+      <div class="logo">
+        <div class="logo-icon" id="main-logo-icon">💬</div>
+        <h1>stiven</h1>
+        <div class="welcome-container">
+          <span class="welcome-text active-text">HI, I'M STIVEN</span>
+          <span class="welcome-text">HI, I'M FAST</span>
+          <span class="welcome-text">HI, I'M SECURE</span>
+          <span class="welcome-text">HI, I'M LIVE</span>
         </div>
-        <div id="r-form" class="hidden">
-          <div class="g-field" style="margin-bottom:12px;">
-            <label>الاسم الكامل</label>
-            <input type="text" id="r-name" placeholder="عبد الرحمن..." />
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login')">تسجيل الدخول</button>
+        <button class="tab" onclick="switchTab('reg')">حساب جديد</button>
+      </div>
+
+      <div id="auth-err" class="err hidden"></div>
+
+      <div id="reg-form" class="hidden">
+        <div class="av-pick">
+          <div class="av-ring" id="av-ring" onclick="document.getElementById('av-file').click()">📷</div>
+          <input type="file" id="av-file" accept="image/*" class="hidden" onchange="pickAvatar(this)" />
+          <small>صورتك الشخصية<br><span onclick="document.getElementById('av-file').click()">اختر صورة</span></small>
+        </div>
+        <div class="row2">
+          <div class="fg"><label>الاسم</label><input type="text" id="r-first" placeholder="ABDERAHMANE" /></div>
+          <div class="fg"><label>الالتحاق</label><input type="text" id="r-last" placeholder="BELKHIR" /></div>
+        </div>
+        <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="r-email" placeholder="belkhir@mail.com" /></div>
+        <div class="fg"><label>كلمة المرور</label><input type="password" id="r-pass" placeholder="6 أحرف على الأقل" /></div>
+        
+        <div class="gender-group">
+          <label class="group-label">الجنس</label>
+          <div class="gender-options">
+            <input type="radio" name="gender" id="g-male" value="male" />
+            <label for="g-male" onclick="onGenderChange('male')">👨 ذكر</label>
+            <input type="radio" name="gender" id="g-female" value="female" />
+            <label for="g-female" onclick="onGenderChange('female')">👩 أنثى</label>
           </div>
-          <div class="g-field" style="margin-bottom:12px;">
-            <label>البريد الإلكتروني</label>
-            <input type="email" id="r-email" placeholder="name@domain.com" />
+        </div>
+
+        <div id="color-picker-container" class="hidden"></div>
+
+        <button class="btn" id="r-btn" onclick="doRegister()">إنشاء الحساب</button>
+      </div>
+
+      <div id="log-form">
+        <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="l-email" placeholder="belkhir@mail.com" /></div>
+        <div class="fg"><label>كلمة المرور</label><input type="password" id="l-pass" placeholder="••••••••" /></div>
+        <button class="btn" id="l-btn" onclick="doLogin()">دخول</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden">
+    <div id="sidebar">
+      <div class="sb-header">
+        <div class="sb-my-av" id="sb-my-av">🧑</div>
+        <div class="sb-my-name">
+          <span id="sb-my-name">—</span>
+          <small>أنت</small>
+        </div>
+        <button class="iBtn" title="خروج" onclick="doLogout()">⏏️</button>
+      </div>
+      <div class="sb-search">
+        <input type="text" id="sb-search" placeholder="🔍 ابحث عن مستخدم..." oninput="filterUsers(this.value)" />
+      </div>
+      <div class="sb-list" id="sb-list">
+        <div class="sb-empty">جارٍ التحميل...</div>
+      </div>
+    </div>
+
+    <div id="chat-panel">
+      <div id="chat-welcome">
+        <div class="wico">💬</div>
+        <h2>مرحباً بك في stiven</h2>
+        <p>اختر مستخدماً من القائمة لبدء محادثة خاصة معه فوراً.</p>
+      </div>
+
+      <div id="chat-view" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="hdr">
+          <button class="back-btn" onclick="closeChatMobile()">◀</button>
+          <div class="hav">
+            <img id="p-av" src="" alt="" style="display:none" />
+            <span id="p-em">👤</span>
+            <div class="odot" id="p-dot"></div>
           </div>
-          <div class="g-field" style="margin-bottom:12px;">
-            <label>كلمة المرور</label>
-            <input type="password" id="r-pass" placeholder="••••••••" />
+          <div class="hinfo">
+            <h2 id="p-name">—</h2>
+            <div class="hst" id="p-status">—</div>
           </div>
-          <div class="g-field">
-            <label>تحديد المظهر الافتراضي للجنس (تخصيص الألوان)</label>
-            <div class="gender-selector">
-              <div class="gender-box m sel" id="g-m">شاب (أزرق سيان)</div>
-              <div class="gender-box f" id="g-f">فتاة (وردي لؤلؤي)</div>
-            </div>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="msgs" id="msgs">
+          <div class="blob-wrap" id="blob-wrap">
+            <div class="blob"></div><div class="blob"></div>
           </div>
-          <button class="primary-btn" id="r-btn" style="width:100%;">إنشاء الحساب</button>
+        </div>
+
+        <div class="img-preview-bar hidden" id="img-preview-bar">
+          <img id="img-preview-thumb" src="" alt="" />
+          <button class="cancel" onclick="cancelImg()">✕</button>
+        </div>
+
+        <div class="bar">
+          <button class="img-btn" onclick="document.getElementById('img-input').click()">🖼️</button>
+          <input type="file" id="img-input" accept="image/*" class="hidden" onchange="pickImage(this)" />
+          <textarea class="tinput" id="msg-in" rows="1" placeholder="اكتب رسالتك..." onkeydown="onKey(event)"></textarea>
+          <button class="sbtn" id="s-btn" onclick="sendMsg()">➤</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="app-w" id="app" style="display: none;">
-    
-    <aside class="side">
-      <div class="side-h">
-        <div class="my-profile">
-          <div class="my-av" id="my-av"></div>
-          <div class="me-info">
-            <h3 id="me-name">جاري...</h3>
-            <p>نشط عبر التشفير</p>
-          </div>
-        </div>
-        <button class="ico-btn" id="logout-btn" title="خروج"><i class="fas fa-power-off"></i></button>
-      </div>
-      <div class="u-list" id="u-list"></div>
-    </aside>
+  <div class="toast" id="toast"></div>
+  <div id="footer-credit">stiven · جميع الحقوق محفوظة</div>
 
-    <main class="c-window">
-      <div class="no-chat-screen" id="no-chat">
-        <div class="logo-art">stiven</div>
-        <p>قم باختيار مستخدم آمن من القائمة للبدء</p>
-      </div>
-      <div id="chat-main" class="hidden" style="display:flex; flex-direction:column; flex:1; height:100%;">
-        <div class="c-header">
-          <div class="c-user-meta">
-            <button class="back-btn" id="back-btn"><i class="fas fa-arrow-right"></i></button>
-            <div class="target-av" id="target-av"></div>
-            <div class="c-info">
-              <h3 id="chat-title">المحادثة</h3>
-              <p>اتصال مباشر ومحمي</p>
-            </div>
-          </div>
-        </div>
+  <script>
+    let FB = null;
+    let ME = null;
+    let myAvatar = null;
+    let imgToSend = null;
+
+    let usersCache = [];
+    let activeUser = null;
+    let unsubMsgs = null;
+    let unsubUsers = null;
+
+    const MALE_COLORS = ["#00e5ff", "#0086ff", "#00ff88", "#ffaa00", "#ffffff"];
+    const FEMALE_COLORS = ["#ff4a6b", "#ec4899", "#a855f7", "#ff00ff", "#ffffff"];
+    let selectedHex = "#00e5ff";
+
+    window.addEventListener("fb-ready", () => {
+      FB = window.__FB;
+      initWelcomeAnimation();
+      FB.onAuthStateChanged(FB.auth, u => {
+        if (u) {
+          ME = u;
+          loadMyProfileAndLaunch();
+        } else {
+          showAuth();
+        }
+      });
+    });
+
+    function initWelcomeAnimation() {
+      const txts = document.querySelectorAll('.welcome-text');
+      if(!txts.length) return;
+      let idx = 0;
+      setInterval(() => {
+        txts[idx].classList.remove('active-text');
+        txts[idx].classList.add('exit-text');
+        setTimeout((oldIdx) => {
+          txts[oldIdx].classList.remove('exit-text');
+        }, 400, idx);
+        idx = (idx + 1) % txts.length;
+        txts[idx].classList.add('active-text');
+      }, 3000);
+    }
+
+    function switchTab(t) {
+      const tabs = document.querySelectorAll('.tab');
+      tabs[0].classList.toggle('active', t==='login');
+      tabs[1].classList.toggle('active', t==='reg');
+      document.getElementById('reg-form').classList.toggle('hidden', t==='login');
+      document.getElementById('log-form').classList.toggle('hidden', t==='reg');
+      document.getElementById('auth-err').classList.add('hidden');
+    }
+
+    function onGenderChange(g) {
+      const container = document.getElementById('color-picker-container');
+      container.innerHTML = '';
+      container.classList.remove('hidden');
+      const colors = (g === 'male') ? MALE_COLORS : FEMALE_COLORS;
+      selectedHex = colors[0];
+      applyLivePreviewColors(selectedHex);
+
+      colors.forEach((hex, i) => {
+        const circle = document.createElement('div');
+        circle.className = 'color-circle' + (i===0 ? 'selected' : '');
+        circle.style.backgroundColor = hex;
+        circle.style.animationDelay = (i * 0.15) + 's';
+        circle.style.setProperty('--sel-glow', hexToRgba(hex, 0.4));
+        circle.onclick = () => {
+          document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('selected'));
+          circle.classList.add('selected');
+          selectedHex = hex;
+          applyLivePreviewColors(hex);
+        };
+        container.appendChild(circle);
+      });
+    }
+
+    function applyLivePreviewColors(hex) {
+      const card = document.getElementById('auth-card');
+      const logoIcon = document.getElementById('main-logo-icon');
+      const activeText = document.querySelector('.welcome-text.active-text');
+      
+      let accent2 = "#0086ff";
+      if (hex === "#ff4a6b" || hex === "#ec4899") accent2 = "#a855f7";
+      else if (hex === "#00e5ff") accent2 = "#0086ff";
+      else accent2 = hex;
+
+      card.style.setProperty('--live-accent', hex);
+      card.style.setProperty('--live-accent2', accent2);
+      card.style.setProperty('--live-glow', hexToRgba(hex, 0.25));
+
+      if(logoIcon) logoIcon.style.background = `linear-gradient(135deg, ${hex}, ${accent2})`;
+    }
+
+    function pickAvatar(input) {
+      if(input.files && input.files[0]) {
+        const r = new FileReader();
+        r.onload = e => {
+          myAvatar = e.target.result;
+          document.getElementById('av-ring').innerHTML = `<img src="${myAvatar}"/>`;
+        };
+        r.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function doRegister() {
+      const first = document.getElementById('r-first').value.trim();
+      const last = document.getElementById('r-last').value.trim();
+      const email = document.getElementById('r-email').value.trim();
+      const pass = document.getElementById('r-pass').value;
+      const gRadio = document.querySelector('input[name="gender"]:checked');
+
+      if(!first || !last || !email || !pass || !gRadio) {
+        showErr("يرجى ملء جميع الحقول واختيار الجنس."); return;
+      }
+      btnLoad("r-btn", true);
+      try {
+        const cred = await FB.createUserWithEmailAndPassword(FB.auth, email, pass);
+        const fullName = first + " " + last;
+        await FB.updateProfile(cred.user, { displayName: fullName });
         
-        <div class="msgs-wrap" id="msgs"></div>
+        await FB.setDoc(FB.doc(FB.db, "users", cred.user.uid), {
+          uid: cred.user.uid,
+          name: fullName,
+          email: email,
+          gender: gRadio.value,
+          themeColor: selectedHex,
+          avatar: myAvatar || "",
+          online: true,
+          lastSeen: FB.serverTimestamp()
+        });
+      } catch(e) { showErr(e.message); btnLoad("r-btn", false); }
+    }
 
-        <div class="img-p-bar hidden" id="img-preview-bar">
-          <div class="p-thumb-w">
-            <img src="" id="img-preview-thumb" />
-            <span>صورة جاهزة للإرسال المشفر</span>
+    async function doLogin() {
+      const email = document.getElementById('l-email').value.trim();
+      const pass = document.getElementById('l-pass').value;
+      if(!email || !pass) { showErr("أدخل البريد وكلمة المرور."); return; }
+      btnLoad("l-btn", true);
+      try {
+        await FB.signInWithEmailAndPassword(FB.auth, email, pass);
+      } catch(e) { showErr("خطأ في تسجيل الدخول: " + e.message); btnLoad("l-btn", false); }
+    }
+
+    async function loadMyProfileAndLaunch() {
+      try {
+        const d = await FB.getDoc(FB.doc(FB.db, "users", ME.uid));
+        let myColor = "#00e5ff";
+        if(d.exists()) {
+          const data = d.data();
+          myColor = data.themeColor || "#00e5ff";
+          let av = document.getElementById('sb-my-av');
+          if(data.avatar) av.innerHTML = `<img src="${data.avatar}"/>`;
+          else av.innerText = (data.gender==='female'?'👩':'🧑');
+        }
+        document.getElementById('sb-my-name').innerText = ME.displayName || ME.email;
+        
+        let a2 = "#0086ff";
+        if(myColor==="#ff4a6b" || myColor==="#ec4899") a2 = "#a855f7";
+        else if(myColor==="#00e5ff") a2 = "#0086ff";
+        else a2 = myColor;
+
+        document.documentElement.style.setProperty('--live-accent', myColor);
+        document.documentElement.style.setProperty('--live-accent2', a2);
+        document.documentElement.style.setProperty('--live-glow', hexToRgba(myColor,0.25));
+        document.documentElement.style.setProperty('--live-me', hexToRgba(myColor,0.45));
+
+        await FB.updateDoc(FB.doc(FB.db, "users", ME.uid), { online: true, lastSeen: FB.serverTimestamp() });
+        showApp();
+        listenUsers();
+      } catch(e) { console.error(e); showAuth(); }
+    }
+
+    function listenUsers() {
+      const q = FB.query(FB.collection(FB.db, "users"), FB.orderBy("name"));
+      unsubUsers = FB.onSnapshot(q, snap => {
+        usersCache = [];
+        snap.forEach(doc => { if(doc.id !== ME.uid) usersCache.push(doc.data()); });
+        renderUsers(usersCache);
+      }, err => console.log(err));
+    }
+
+    function renderUsers(arr) {
+      const list = document.getElementById('sb-list');
+      list.innerHTML = '';
+      if(!arr.length) { list.innerHTML = '<div class="sb-empty">لا يوجد مستخدمون آخرون بعد</div>'; return; }
+      arr.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-item' + ((activeUser && activeUser.uid===u.uid)?' active':'');
+        div.onclick = () => selectUser(u);
+
+        let avHtml = u.avatar ? `<img src="${u.avatar}"/>` : (u.gender==='female'?'👩':'🧑');
+        div.innerHTML = `
+          <div class="u-av">${avHtml}<div class="u-dot ${u.online?'on':''}"></div></div>
+          <div class="u-info">
+            <h3>${u.name}</h3>
+            <p id="last-p-${u.uid}">${u.online ? 'متصل الآن' : 'غير متصل'}</p>
           </div>
-          <button class="ico-btn" id="cancel-img" style="color:#ef4444;"><i class="fas fa-times"></i></button>
-        </div>
+        `;
+        list.appendChild(div);
+      });
+    }
 
-        <div class="c-bar">
-          <div class="c-bar-inner">
-            <button class="ico-btn" id="clip-btn" style="margin-left:5px;"><i class="fas fa-paperclip"></i></button>
-            <input type="file" id="f-file" accept="image/*" class="hidden" />
-            <input type="text" id="msg-input" placeholder="اكتب رسالة مشفرة هنا..." />
-            <button class="ico-btn" id="send-btn" style="color:var(--cyan);"><i class="fas fa-paper-plane"></i></button>
-          </div>
-        </div>
-      </div>
-    </main>
+    function filterUsers(val) {
+      const v = val.toLowerCase().trim();
+      if(!v) { renderUsers(usersCache); return; }
+      const f = usersCache.filter(u => u.name.toLowerCase().includes(v));
+      renderUsers(f);
+    }
 
-  </div>
+    function selectUser(u) {
+      activeUser = u;
+      renderUsers(usersCache);
+      document.getElementById('sidebar').classList.add('slide-out');
+      document.getElementById('chat-welcome').classList.add('hidden');
+      document.getElementById('chat-view').classList.remove('hidden');
 
+      const pAv = document.getElementById('p-av');
+      const pEm = document.getElementById('p-em');
+      if(u.avatar) { pAv.src = u.avatar; pAv.style.display='block'; pEm.style.display='none'; }
+      else { pAv.style.display='none'; pEm.style.display='block'; pEm.innerText = (u.gender==='female'?'👩':'🧑'); }
+
+      document.getElementById('p-name').innerText = u.name;
+      const dot = document.getElementById('p-dot');
+      const st = document.getElementById('p-status');
+      if(u.online) { dot.className='odot on'; st.innerText='متصل الآن'; st.className='hst on'; }
+      else { dot.className='odot'; st.innerText='غير متصل'; st.className='hst'; }
+
+      loadMsgs();
+    }
+
+    function loadMsgs() {
+      if(unsubMsgs) unsubMsgs();
+      const wrap = document.getElementById('msgs');
+      
+      // إزالة كل الرسائل القديمة مع الإبقاء على خلفية الـ blob النابضة
+      const bWrap = document.getElementById('blob-wrap');
+      wrap.innerHTML = '';
+      if(bWrap) wrap.appendChild(bWrap);
+
+      const q = FB.query(FB.collection(FB.db, "messages"), FB.orderBy("timestamp", "asc"));
+      
+      unsubMsgs = FB.onSnapshot(q, snap => {
+        // تفريغ الرسائل مجدداً عند كل تحديث فوري
+        wrap.innerHTML = '';
+        if(bWrap) wrap.appendChild(bWrap);
+        
+        let hasMsgs = false;
+
+        snap.forEach(d => {
+          const m = d.data();
+          // فحص دقيق وشامل لضمان ظهور الرسائل المتبادلة بين الطرفين فقط بكل الاتجاهات
+          if ((m.senderId === ME.uid && m.receiverId === activeUser.uid) || 
+              (m.senderId === activeUser.uid && m.receiverId === ME.uid)) {
+            
+            hasMsgs = true;
+            const isMe = m.senderId === ME.uid;
+            const row = document.createElement('div');
+            row.className = `brow ${isMe ? 'me' : 'other'}`;
+
+            let avStr = '';
+            if(!isMe) {
+              avStr = activeUser.avatar ? `<img src="${activeUser.avatar}"/>` : (activeUser.gender==='female'?'👩':'🧑');
+            } else {
+              avStr = myAvatar ? `<img src="${myAvatar}"/>` : '🧑';
+            }
+
+            let bodyHtml = '';
+            if(m.img) bodyHtml += `<img src="${m.img}" onclick="zoomImg('${m.img}')" style="cursor:pointer;" />`;
+            if(m.text) bodyHtml += `<div>${escapeHtml(m.text)}</div>`;
+
+            let timeStr = '';
+            if(m.timestamp && m.timestamp.toDate) {
+              const dt = m.timestamp.toDate();
+              timeStr = dt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+
+            row.innerHTML = `
+              <div class="bav">${avStr}</div>
+              <div style="display:flex; flex-direction:column; max-width:100%;">
+                <div class="bub">${bodyHtml}</div>
+                <div class="btime">${timeStr}</div>
+              </div>
+            `;
+            wrap.appendChild(row);
+          }
+        });
+
+        if(!hasMsgs) { renderEmptyState(); }
+        wrap.scrollTop = wrap.scrollHeight;
+      });
+    }
+
+    async function sendMsg() {
+      const inp = document.getElementById('msg-in');
+      const txt = inp.value.trim();
+      if(!txt && !imgToSend) return;
+
+      const currentActiveUser = activeUser; 
+      if(!currentActiveUser) return;
+
+      inp.value = '';
+      inp.style.height = 'auto';
+
+      const copyImg = imgToSend;
+      cancelImg();
+
+      try {
+        await FB.addDoc(FB.collection(FB.db, "messages"), {
+          senderId: ME.uid,
+          receiverId: currentActiveUser.uid,
+          text: txt,
+          img: copyImg || "",
+          timestamp: FB.serverTimestamp()
+        });
+      } catch(e) { showToast("فشل إرسال الرسالة."); console.error(e); }
+    }
+
+    function onKey(e) {
+      if(e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); sendMsg();
+      }
+    }
+
+    function pickImage(input) {
+      if(input.files && input.files[0]) {
+        const f = input.files[0];
+        if(f.size > 1.5 * 1024 * 1024) { showToast("الحد الأقصى للصور 1.5 ميجا."); return; }
+        const r = new FileReader();
+        r.onload = e => {
+          imgToSend = e.target.result;
+          document.getElementById("img-preview-thumb").src = imgToSend;
+          document.getElementById("img-preview-bar").classList.remove("hidden");
+        };
+        r.readAsDataURL(f); input.value = "";
+      }
+    }
+
+    function cancelImg() { imgToSend = null; document.getElementById("img-preview-bar").classList.add("hidden"); }
+    
+    function zoomImg(src) {
+      const box = document.createElement("div");
+      box.className = "lbox"; box.innerHTML = `<img src="${src}"/>`;
+      box.onclick = () => box.remove(); document.body.appendChild(box);
+    }
+    
+    function renderEmptyState() {
+      const wrap = document.getElementById("msgs");
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<div class="em" style="text-align:center;font-size:2rem;margin-top:40px;">💌</div><h3 style=\"text-align:center;color:var(--muted);margin-top:10px;\">لا رسائل بعد</h3>';
+      wrap.appendChild(empty);
+    }
+    
+    function btnLoad(id, on) {
+      const b = document.getElementById(id); if(!b) return;
+      b.disabled = on;
+      b.innerHTML = on ? '<span class=\"spin\"></span>' : (id==="r-btn"?"إنشاء الحساب":"دخول");
+    }
+    
+    function hexToRgba(hex, a) {
+      const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+
+    function escapeHtml(str) {
+      if(!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function showAuth() {
+      document.body.classList.add('auth-open');
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('app-shell').classList.add('hidden');
+      btnLoad("l-btn", false); btnLoad("r-btn", false);
+    }
+    function showApp() {
+      document.body.classList.remove('auth-open');
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+    }
+    function showErr(m) {
+      const e = document.getElementById('auth-err'); e.innerText = m; e.classList.remove('hidden');
+    }
+    function showToast(m) {
+      const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    function closeChatMobile() { document.getElementById('sidebar').classList.remove('slide-out'); }
+    async function doLogout() {
+      if(ME) {
+        try { await FB.updateDoc(FB.doc(FB.db, "users", ME.uid), { online: false, lastSeen: FB.serverTimestamp() }); } catch(e){}
+      }
+      if(unsubMsgs) unsubMsgs(); if(unsubUsers) unsubUsers();
+      await FB.signOut(FB.auth); ME = null; activeUser = null; showAuth();
+    }
+  </script>
 </body>
 </html>

@@ -41,16 +41,15 @@
   </script>
 
   <style>
-    /* ─── الألوان الأساسية وثيم الزجاج الداكن ──────────────────────── */
     :root {
       --bg:        #06090e;
       --surface:   rgba(10, 16, 26, 0.75); 
       --surface2:  rgba(20, 32, 50, 0.6);
       --border:    rgba(255, 255, 255, 0.08);
-      --accent:    #00e5ff; 
-      --accent2:   #0086ff;
-      --glow:      rgba(0, 229, 255, 0.25);
-      --me:        rgba(0, 134, 255, 0.45);
+      --accent:    #a855f7; 
+      --accent2:   #7c3aed;
+      --glow:      rgba(168, 85, 247, 0.25);
+      --me:        rgba(124, 58, 237, 0.45);
       --out:       rgba(255, 255, 255, 0.04);
       --text:      #f1f5f9;
       --muted:     #64748b;
@@ -65,7 +64,7 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at 15% 15%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
+      background: radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
                   radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.05) 0%, transparent 55%);
       z-index: -2;
     }
@@ -130,14 +129,13 @@
     }
     .tab.active { background: var(--surface2); color: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 
-    /* تثبيت المظهر وتوسيط الزائد تماماً */
     .av-pick { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; justify-content: flex-start; }
     .av-ring {
       width: 56px; height: 56px; border-radius: 50%;
       background: rgba(255,255,255,0.03);
       border: 2px dashed rgba(255,255,255,0.2);
       overflow: hidden; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; 
+      display: flex; align-items: center; justify-content: center; /* سنترة المحاذاة لعلامة الزائد والصور داخلياً */
       font-size: 20px; line-height: 1; text-align: center;
       transition: all .25s ease; box-sizing: border-box;
     }
@@ -245,8 +243,8 @@
     
     .blob-wrap { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
     .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.06; }
-    .blob:nth-child(1) { width:300px; height:300px; top:-5%; left:-10%; background: var(--live-accent, var(--accent)); }
-    .blob:nth-child(2) { width:250px; height:250px; bottom:10%; right:-10%; background: var(--live-accent2, var(--accent2)); }
+    .blob-wrap .blob:nth-child(1) { width:300px; height:300px; top:-5%; left:-10%; background: var(--live-accent, var(--accent)); }
+    .blob-wrap .blob:nth-child(2) { width:250px; height:250px; bottom:10%; right:-10%; background: var(--live-accent2, var(--accent2)); }
     .msgs > *:not(.blob-wrap) { position:relative; z-index:1; }
 
     .day-sep { text-align:center; margin:8px 0; width: 100%; }
@@ -268,7 +266,7 @@
     .btime { font-size:.68rem; color:var(--muted); margin-top:4px; padding: 0 4px; }
     .brow.me .btime::after { content:' ✓✓'; color: var(--live-accent, var(--accent)); }
 
-    /* تحسين شريط المدخلات السفلي للمحادثة لمنع الأخطاء القياسية الشاشات */
+    /* تحسين شريط الإدخال ليتجاوب تماماً مع الهاتف وأزرار التنقل */
     .bar { 
       display: flex; align-items: center; gap: 8px; padding: 12px 16px; 
       background: rgba(10, 16, 26, 0.9); border-top: 1px solid var(--border); 
@@ -300,7 +298,7 @@
 
     /* ═══════════ RESPONSIVE SMARTPHONE MEDIA QUERIES ═══════════ */
     @media (max-width: 768px) {
-      html, body { overflow: auto; height: auto; min-height: 100%; } /* السماح بالتمرير العام في صفحات الدخول للحفاظ على التناسق */
+      html, body { overflow: auto; height: auto; min-height: 100%; }
       
       #auth-screen { padding: 12px 10px; min-height: 100vh; align-items: flex-start; }
       .card { padding: 22px 20px; border-radius: 20px; max-height: none; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
@@ -319,8 +317,8 @@
       .brow { max-width: 90%; }
       .bub { font-size: 0.92rem; padding: 9px 13px; }
       
-      .bar { padding: 10px 12px; background: #06090e; } /* خلفية ثابتة داكنة لشريط الكتابة على الهاتف لراحة العين */
-      #footer-credit { display: none; } /* إخفاء الحقوق السفلي في الهواتف لمنع التداخل مع الكيبورد */
+      .bar { padding: 10px 12px; background: #06090e; }
+      #footer-credit { display: none; }
     }
 
     @media (max-width: 360px) {
@@ -457,7 +455,7 @@
 
   <script>
     let FB = null; let ME = null; let myAvatar = null;
-    let imgToSend = null; let selectedThemeColor = "#00e5ff"; let selectedThemeColor2 = "#0086ff";
+    let imgToSend = null; let selectedThemeColor = "#a855f7"; let selectedThemeColor2 = "#7c3aed";
     let usersMap = {}; let currentChatUid = null; let unsubUsers = null; let unsubMsgs = null;
     let isMaleUser = true;
 
@@ -518,7 +516,7 @@
       r.style.setProperty('--live-me', hexToRgba(c1, 0.45));
     }
 
-    applyLiveTheme("#00e5ff", "#0086ff");
+    applyLiveTheme("#a855f7", "#7c3aed");
 
     function startWelcomeTextMorph() {
       const texts = document.querySelectorAll(".welcome-text");

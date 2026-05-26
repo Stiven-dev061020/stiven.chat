@@ -14,6 +14,7 @@
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
              serverTimestamp, doc, setDoc, updateDoc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
     const firebaseConfig = {
       apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
       authDomain:        "stiven-chat.firebaseapp.com",
@@ -38,7 +39,6 @@
   </script>
 
   <style>
-    /* ─── الألوان الأساسية الافتراضية وثيم الزجاج الداكن ──────────────────────── */
     :root {
       --bg:        #06090e;
       --surface:   rgba(10, 16, 26, 0.65); 
@@ -376,7 +376,7 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-open">
 
   <div id="auth-screen">
     <div class="card" id="auth-card">
@@ -555,7 +555,6 @@
       R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
       R = (R>0)?R:0; G = (G>0)?G:0; B = (B>0)?B:0;
       const rHex = (R.toString(16).length==1)?"0"+R.toString(16):R.toString(16);
-      const gHex = (G.toString(16).length==1)?"0"+gHex; // تصحيح لخطأ مطبعي خفيف كان بالتابع سابقاً لمنع أي تجمد
       const gStr = (G.toString(16).length==1)?"0"+G.toString(16):G.toString(16);
       const bHex = (B.toString(16).length==1)?"0"+B.toString(16):B.toString(16);
       return "#"+rHex+gStr+bHex;
@@ -768,7 +767,7 @@
 
       const dot = document.getElementById("p-dot");
       const st = document.getElementById("p-status");
-      if (u.online) { dot.classList.add("on"); id="p-status"
+      if (u.online) { dot.classList.add("on"); 
         st.innerText = "نشط الآن"; st.classList.add("on"); }
       else { dot.classList.remove("on"); st.innerText = "غير متصل"; st.classList.remove("on"); }
 

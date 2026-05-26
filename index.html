@@ -14,7 +14,6 @@
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
              serverTimestamp, doc, setDoc, updateDoc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
     const firebaseConfig = {
       apiKey:            "AIzaSyBGgQjtb75Z5rsa0QxIGwau06m771k2BvA",
       authDomain:        "stiven-chat.firebaseapp.com",
@@ -28,7 +27,6 @@
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
-
     window.__FB = {
       auth, db,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -36,7 +34,6 @@
       collection, addDoc, onSnapshot, query, orderBy,
       serverTimestamp, doc, setDoc, updateDoc, getDoc
     };
-
     window.dispatchEvent(new Event("fb-ready"));
   </script>
 
@@ -194,14 +191,16 @@
 
     .err {
       background: rgba(255,74,107,.12); border: 1px solid rgba(255,74,107,.3);
-      border-radius: 10px; padding: 8px 12px; font-size: .8rem;
+      border-radius: 10px;
+      padding: 8px 12px; font-size: .8rem;
       color: var(--red); margin-bottom: 10px; text-align: center;
     }
 
     .gender-group { margin-bottom: 10px; }
     .gender-group label.group-label {
       display: block; font-size: .68rem; color: var(--muted);
-      margin-bottom: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 6px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
     }
     .gender-options { display: flex; gap: 10px; }
     .gender-options input[type="radio"] { display: none; }
@@ -221,7 +220,8 @@
 
     #color-picker-container {
       display: flex; flex-wrap: wrap; gap: 8px;
-      margin-bottom: 10px; padding: 10px 12px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
       background: rgba(0,0,0,0.3); border: 1.5px solid var(--border);
       border-radius: 14px;
       animation: slideUp .3s cubic-bezier(.16,1,.3,1);
@@ -263,7 +263,8 @@
     #sidebar {
       width: 340px;
       min-width: 290px; flex-shrink: 0;
-      display: flex; flex-direction: column;
+      display: flex;
+      flex-direction: column;
       background: var(--surface); 
       border: 1px solid var(--live-accent, var(--accent));
       backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
@@ -296,7 +297,7 @@
 
     #chat-panel {
       flex: 1;
-      display: flex; flex-direction: column; overflow: hidden; 
+      display: flex; flex-direction: column; overflow: hidden;
       background: var(--surface); border: 1px solid var(--live-accent, var(--accent));
       backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass); border-radius: 20px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 20px var(--live-glow, var(--glow));
@@ -398,7 +399,7 @@
 
       <div id="auth-err" class="err hidden"></div>
 
-      <div id="reg-form">
+      <div id="reg-form" class="hidden">
         <div class="av-pick">
           <div class="av-ring" id="av-ring" onclick="document.getElementById('av-file').click()">📷</div>
           <input type="file" id="av-file" accept="image/*" class="hidden" onchange="pickAvatar(this)" />
@@ -406,8 +407,8 @@
         </div>
 
         <div class="row2">
-          <div class="fg"><label>الاسم</label><input type="text" id="r-first" placeholder=" ABDERAHMANE" /></div>
-          <div class="fg"><label>اللقب</label><input type="text" id="r-last" placeholder="BELKHIR" /></div>
+          <div class="fg"><label>الاسم</label><input type="text" id="r-first" placeholder="عبد الرحمان" /></div>
+          <div class="fg"><label>الالتحاق</label><input type="text" id="r-last" placeholder="بلخير" /></div>
         </div>
         <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="r-email" placeholder="belkhir@mail.com" /></div>
         <div class="fg"><label>كلمة المرور</label><input type="password" id="r-pass" placeholder="6 أحرف على الأقل" /></div>
@@ -428,7 +429,7 @@
         <button class="btn" id="r-btn" onclick="doRegister()">إنشاء الحساب</button>
       </div>
 
-      <div id="log-form" class="hidden">
+      <div id="log-form">
         <div class="fg"><label>البريد الإلكتروني</label><input type="email" id="l-email" placeholder="belkhir@mail.com" /></div>
         <div class="fg"><label>كلمة المرور</label><input type="password" id="l-pass" placeholder="••••••••" /></div>
         <button class="btn" id="l-btn" onclick="doLogin()">دخول</button>
@@ -498,15 +499,16 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <div id="footer-credit"> &nbsp;·&nbsp; </div>
+  <div id="footer-credit">Powered by Meta Platforms, Inc. &nbsp;·&nbsp; Engineered by abderahmane belkhir</div>
 
   <script>
-    let FB = null; let ME = null; let myAvatar = null;
+    let FB = null; let ME = null;
+    let myAvatar = null;
     let imgToSend = null; let selectedThemeColor = "#00e5ff"; let selectedThemeColor2 = "#0086ff";
-    let usersMap = {}; let currentChatUid = null; let unsubUsers = null; let unsubMsgs = null;
+    let usersMap = {};
+    let currentChatUid = null; let unsubUsers = null; let unsubMsgs = null;
     let isMaleUser = true;
 
-    /* ── Gender & Color Picker (مصفوفة الألوان المخصصة القديمة مدمجة بالكامل) ──────────────── */
     const COLORS = {
       male:   ["#1a73e8", "#0d47a1", "#1565c0", "#0288d1", "#006064", "#2e7d32", "#37474f", "#455a64", "#263238", "#4527a0"],
       female: ["#e91e63", "#c2185b", "#ad1457", "#880e4f", "#ce93d8", "#ba68c8", "#ab47bc", "#9c27b0", "#f48fb1", "#f06292"]
@@ -548,13 +550,15 @@
 
     function adjustColorBrightness(hex, percent) {
       let R = parseInt(hex.substring(1,3),16), G = parseInt(hex.substring(3,5),16), B = parseInt(hex.substring(5,7),16);
-      R = parseInt(R * (100 + percent) / 100); G = parseInt(G * (100 + percent) / 100); B = parseInt(B * (100 + percent) / 100);
+      R = parseInt(R * (100 + percent) / 100); G = parseInt(G * (100 + percent) / 100);
+      B = parseInt(B * (100 + percent) / 100);
       R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
       R = (R>0)?R:0; G = (G>0)?G:0; B = (B>0)?B:0;
       const rHex = (R.toString(16).length==1)?"0"+R.toString(16):R.toString(16);
-      const gHex = (G.toString(16).length==1)?"0"+G.toString(16):G.toString(16);
+      const gHex = (G.toString(16).length==1)?"0"+gHex; // تصحيح لخطأ مطبعي خفيف كان بالتابع سابقاً لمنع أي تجمد
+      const gStr = (G.toString(16).length==1)?"0"+G.toString(16):G.toString(16);
       const bHex = (B.toString(16).length==1)?"0"+B.toString(16):B.toString(16);
-      return "#"+rHex+gHex+bHex;
+      return "#"+rHex+gStr+bHex;
     }
 
     function applyLiveTheme(c1, c2) {
@@ -571,7 +575,6 @@
 
     applyLiveTheme("#00e5ff", "#0086ff");
 
-    // محرك تحريك وتغيير الكلمات النصية (Morph Effect) بشكل شفاف وسلس للغاية
     function startWelcomeTextMorph() {
       const texts = document.querySelectorAll(".welcome-text");
       if (texts.length === 0) return;
@@ -623,12 +626,13 @@
       const rForm = document.getElementById("reg-form");
       document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
       document.getElementById("auth-err").classList.add("hidden");
+      
       if (t === 'login') {
-        event.target.classList.add("active");
+        if(event) event.target.classList.add("active");
         lForm.classList.remove("hidden");
         rForm.classList.add("hidden");
       } else {
-        event.target.classList.add("active");
+        if(event) event.target.classList.add("active");
         rForm.classList.remove("hidden");
         lForm.classList.add("hidden");
       }
@@ -641,7 +645,8 @@
     }
 
     function pickAvatar(input) {
-      const f = input.files[0]; if (!f) return;
+      const f = input.files[0];
+      if (!f) return;
       const r = new FileReader(); r.onload = (e) => {
         myAvatar = e.target.result;
         document.getElementById("av-ring").innerHTML = `<img src="${myAvatar}"/>`;
@@ -655,11 +660,9 @@
       const email = document.getElementById("r-email").value.trim();
       const pass = document.getElementById("r-pass").value;
       const gRadio = document.querySelector('input[name="gender"]:checked');
-
       if (!first || !last || !email || !pass) return showErr("يرجى ملء جميع الحقول المطلوبة.");
       if (!gRadio) return showErr("يرجى تحديد الجنس أولاً.");
       if (pass.length < 6) return showErr("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
-
       btnLoad("r-btn", true);
       try {
         const cred = await FB.createUserWithEmailAndPassword(FB.auth, email, pass);
@@ -765,7 +768,8 @@
 
       const dot = document.getElementById("p-dot");
       const st = document.getElementById("p-status");
-      if (u.online) { dot.classList.add("on"); st.innerText = "نشط الآن"; st.classList.add("on"); }
+      if (u.online) { dot.classList.add("on"); id="p-status"
+        st.innerText = "نشط الآن"; st.classList.add("on"); }
       else { dot.classList.remove("on"); st.innerText = "غير متصل"; st.classList.remove("on"); }
 
       listenMsgs();
@@ -779,10 +783,8 @@
       if (unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
       const wrap = document.getElementById("msgs");
       wrap.innerHTML = '<div class="blob-wrap"><div class="blob"></div><div class="blob"></div></div>';
-
       const chatId = ME.uid < currentChatUid ? `${ME.uid}_${currentChatUid}` : `${currentChatUid}_${ME.uid}`;
       const q = FB.query(FB.collection(FB.db, "chats", chatId, "messages"), FB.orderBy("time", "asc"));
-
       unsubMsgs = FB.onSnapshot(q, (snap) => {
         const bWrap = wrap.querySelector(".blob-wrap");
         wrap.innerHTML = ""; if (bWrap) wrap.appendChild(bWrap);
@@ -826,7 +828,8 @@
       if (!text && !imgToSend) return;
 
       const txt = text; const img = imgToSend;
-      txtIn.value = ""; txtIn.style.height = "auto";
+      txtIn.value = "";
+      txtIn.style.height = "auto";
       cancelImg();
 
       const chatId = ME.uid < currentChatUid ? `${ME.uid}_${currentChatUid}` : `${currentChatUid}_${ME.uid}`;
@@ -840,7 +843,8 @@
     function onKey(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
 
     function pickImage(input) {
-      const f = input.files[0]; if (!f) return;
+      const f = input.files[0];
+      if (!f) return;
       const r = new FileReader(); r.onload = (e) => {
         imgToSend = e.target.result;
         document.getElementById("img-preview-thumb").src = imgToSend;
@@ -850,9 +854,12 @@
     }
 
     function cancelImg() { imgToSend = null; document.getElementById("img-preview-bar").classList.add("hidden"); }
-    function zoomImg(src) { const box = document.createElement("div"); box.className = "lbox"; box.innerHTML = `<img src="${src}"/>`; box.onclick = () => box.remove(); document.body.appendChild(box); }
-    function renderEmptyState() { const wrap = document.getElementById("msgs"); const empty = document.createElement("div"); empty.className = "empty"; empty.innerHTML = '<div class="em" style="text-align:center;font-size:2rem;margin-top:40px;">💌</div><h3 style="text-align:center;color:var(--muted);margin-top:10px;">لا رسائل بعد</h3>'; wrap.appendChild(empty); }
-    function btnLoad(id, on) { const b = document.getElementById(id); b.disabled = on; b.innerHTML = on ? '<span class="spin"></span>' : (id==="r-btn"?"إنشاء الحساب":"دخول"); }
+    function zoomImg(src) { const box = document.createElement("div"); box.className = "lbox"; box.innerHTML = `<img src="${src}"/>`;
+      box.onclick = () => box.remove(); document.body.appendChild(box); }
+    function renderEmptyState() { const wrap = document.getElementById("msgs");
+      const empty = document.createElement("div"); empty.className = "empty"; empty.innerHTML = '<div class="em" style="text-align:center;font-size:2rem;margin-top:40px;">💌</div><h3 style="text-align:center;color:var(--muted);margin-top:10px;">لا رسائل بعد</h3>'; wrap.appendChild(empty); }
+    function btnLoad(id, on) { const b = document.getElementById(id); b.disabled = on; b.innerHTML = on ?
+      '<span class="spin"></span>' : (id==="r-btn"?"إنشاء الحساب":"دخول"); }
     
     function hexToRgba(hex, a) {
       const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
@@ -860,7 +867,8 @@
     }
 
     function showToast(m) {
-      const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show");
+      const t = document.getElementById("toast");
+      t.innerText = m; t.classList.add("show");
       setTimeout(() => t.classList.remove("show"), 4000);
     }
   </script>

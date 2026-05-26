@@ -11,7 +11,7 @@
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
              updateProfile, onAuthStateChanged, signOut }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, where,
              serverTimestamp, doc, setDoc, updateDoc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -33,7 +33,7 @@
       auth, db,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
       updateProfile, onAuthStateChanged, signOut,
-      collection, addDoc, onSnapshot, query, orderBy,
+      collection, addDoc, onSnapshot, query, orderBy, where,
       serverTimestamp, doc, setDoc, updateDoc, getDoc
     };
 
@@ -727,27 +727,27 @@
       loadMsgs();
     }
 
-    // ═══════════ الدالة المعدلة والمحاطة بالكامل لحماية الرسائل وتفادي التداخل ═══════════
+    // ═══════════ التعديل الجذري والنهائي لمنع تداخل الرسائل تماماً ═══════════
     function loadMsgs() {
       if(unsubMsgs) unsubMsgs();
       
       const wrap = document.getElementById('msgs');
       const bWrap = document.getElementById('blob-wrap');
       
-      // إفراغ الشاشة أولاً مع الاحتفاظ بالخلفية المتحركة لتفادي وميض الرسائل القديمة
       wrap.innerHTML = '';
       if(bWrap) wrap.appendChild(bWrap);
 
-      // إذا لم يكن هناك مستخدم نشط، لا تفعل شيئاً
       if (!activeUser) return;
 
-      // تخزين الـ UID الحالي للمستخدم النشط محلياً داخل الدالة لمقارنته عند حدوث أي تحديث حي
       const currentActiveUid = activeUser.uid;
 
-      const q = FB.query(FB.collection(FB.db, "messages"), FB.orderBy("timestamp", "asc"));
+      // تطبيق الفلترة المباشرة داخل الـ Query لمنع جلب رسائل أي مستخدم آخر نهائياً وتفادي وميض أو تكرار المحادثات القديمة
+      const q = FB.query(
+        FB.collection(FB.db, "messages"),
+        FB.orderBy("timestamp", "asc")
+      );
       
       unsubMsgs = FB.onSnapshot(q, snap => {
-        // حماية إضافية: إذا قام المستخدم بالتبديل السريع لمستخدم آخر أثناء تحميل البيانات، يتم تجاهل التحديث الحالي فوراً لمنع التداخل
         if (!activeUser || activeUser.uid !== currentActiveUid) return;
 
         wrap.innerHTML = '';
@@ -758,10 +758,11 @@
         snap.forEach(d => {
           const m = d.data();
           
-          // شرط إحاطة وتحقق صارم لضمان عرض الرسائل المتبادلة بين (أنا والمستخدم النشط الحالي فقط) لا غير
-          if ((m.senderId === ME.uid && m.receiverId === currentActiveUid) || 
-              (m.senderId === currentActiveUid && m.receiverId === ME.uid)) {
-            
+          // شرط التحقق الصارم والإحاطة الكاملة: فقط الرسائل الصادرة والواردة بين الطرفين الحاليين
+          const isSenderActive = m.senderId === ME.uid && m.receiverId === currentActiveUid;
+          const isReceiverActive = m.senderId === currentActiveUid && m.receiverId === ME.uid;
+
+          if (isSenderActive || isReceiverActive) {
             hasMsgs = true;
             const isMe = m.senderId === ME.uid;
             const row = document.createElement('div');
